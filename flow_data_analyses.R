@@ -33,6 +33,7 @@ library(zoo)                               # Time series object and functions
 library(xts)                               # Time series object and functions
 library(remote)                            # EOT implementation in R/cpp
 library(XML)                               # HTML funcitons
+library(plyr)
 
 #################################################
 ###### Functions  used in the script  ##########
@@ -98,7 +99,109 @@ filename_flow <- "MO1-9_ALL.txt"
 #tb <- read.table(file.path(inDir,filename_flow),sep=",")
 #tb <- read.table(file.path(inDir,filename_flow),fill=T,sep=",")
 tb <- read.table(file.path(inDir,filename_flow), 
-           sep=',', quote=NULL,fill=TRUE, comment='', header=FALSE)
+           sep=',', quote=NULL,fill=TRUE, comment='', 
+           #as.is=F,
+           stringsAsFactors = F,
+           header=TRUE)
 
-#scrping tables from html pages
-#http://stackoverflow.com/questions/1395528/scraping-html-tables-into-r-data-frames-using-the-xml-package
+names(tb)
+
+tb$X1.9_ORIG_CVE_HINT[tb$X1.9_ORIG_CVE_HINT=="MEXICO"] <- "MEX"
+tb$X1.9_DEST_CVE_HINT[tb$X1.9_DEST_CVE_HINT=="MEXICO"] <- "MEX"
+
+#> unique(tb$X1.9_ORIG_CVE_HINT)
+#[1] "QR"  "MEX" "GYR" NA    ""    "W"  
+
+table(tb$X1.9_ORIG_CVE_HINT)
+#[1] "QR"  "MEX" "GYR" NA    ""    "W"  
+
+table(tb$X1.9_ORIG_CVE_HINT)
+
+#GYR    MEX     QR      W 
+#141 185025 181118  88711      2 
+
+table(tb$X1.9_DEST_CVE_HINT)
+
+#GYR    MEX     QR      W 
+#141  41583  17261 395450     11 
+x <- (table(tb$X1.9_DEST_CVE_HINT))
+#barplot(formatC(x, format = "d"))
+#barplot(as.integer(tb$X1.9_DEST_CVE_HINT))
+barplot(x)
+#histogram((tb$X1.9_DEST_CVE_HINT))
+tb <- subset(tb,tb$X1.9_ORIG_CVE_HINT!="" & tb$X1.9_DEST_CVE_HINT!="")
+dim(tb)
+x <- (table(tb$X1.9_ORIG_CVE_HINT))
+print(x)
+x <- (table(tb$X1.9_DEST_CVE_HINT))
+print(x)
+#barplot(formatC(x, format = "d"))
+#barplot(as.integer(tb$X1.9_DEST_CVE_HINT))
+barplot(x)
+
+### Now prepare the data:
+#Use 
+#"ORIG_CLAVE","DEST_CLAVE"
+#X1.9_ORIG_CVE_HINT,X1.9_DEST_CVE_HINT
+
+#Outflow: need to recode hinterland with: 1 if HINT is GYR, MEX, MEXICO and Inflow: Examine X1.9_ORIG_CVE_HINT and X1.9_DEST_CVE_HINT, recode 1 if: 
+#  MEX-QR
+#  MEXICO-QR
+#  GYR-QR
+#Internal consumption: QR-WR
+
+#a) QR<->QR
+#b) QR->GYR
+#c) QR<-GYR
+#d) QR->MX
+#e) QR<-MX
+#f) QR->W
+#g) QR-<W
+
+
+### Do a quick crosstab
+xtb <- table(tb$X1.9_ORIG_CVE_HINT,tb$X1.9_DEST_CVE_HINT)
+print(xtb)
+
+#       GYR    MEX     QR      W
+#GYR    153   2656 182190      3
+#MEX   1232     29 179836      7
+#QR   40184  14564  33122      1
+#W        0      0      2      0
+
+tb$ORIG_DEST_HINT <- paste(tb$X1.9_ORIG_CVE_HINT,tb$X1.9_DEST_CVE_HINT,sep="_")
+unique(ORIG_DEST_HINT)
+#[1] "QR_QR"   "MEX_QR"  "QR_GYR"  "QR_MEX"  "GYR_QR"  "GYR_MEX" "MEX_GYR" "GYR_GYR" "MEX_MEX" "MEX_W"  
+#[11] "GYR_W"   "QR_W"    "W_QR"
+#only 13 of the combination are realized compared to the crosstab
+
+## Reclass 7 options out of 16, this is centering on options from QR point of view only!!!
+
+QR_QR <- a #internal consuption: C
+QR_GYR <- b #QR->GYR outflow: B
+GYR_QR <- c # inflow: A 
+QR_MEX <- d #d) QR->MX: B (outflow)
+MEX_QR <- e #e) QR<- MX: A (inflow) 
+QR_W <- f #f) QR->W: B (outflow)
+W_QR <- g #g) QR-<W: A (inflow)
+
+tb$flow_types <- revalue(tb$, c("M"="1", "F"="2"))
+c(QR_QR <- a #internal consuption: C
+QR_GYR <- b #QR->GYR outflow: B
+GYR_QR <- c # inflow: A 
+QR_MEX <- d #d) QR->MX: B (outflow)
+MEX_QR <- e #e) QR<- MX: A (inflow) 
+QR_W <- f #f) QR->W: B (outflow)
+W_QR <- g #g) QR-<W: A (inflow)
+
+tb$flow_types <- revalue(data$sex, c("M"="1", "F"="2"))
+
+
+#Reclassify this and then classify in inflow and outlfow + 
+####
+
+
+
+
+
+#################################  END OF FILE ###########################################
