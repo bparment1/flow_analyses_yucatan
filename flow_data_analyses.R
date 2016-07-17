@@ -170,38 +170,97 @@ print(xtb)
 #W        0      0      2      0
 
 tb$ORIG_DEST_HINT <- paste(tb$X1.9_ORIG_CVE_HINT,tb$X1.9_DEST_CVE_HINT,sep="_")
-unique(ORIG_DEST_HINT)
+unique(tb$ORIG_DEST_HINT)
 #[1] "QR_QR"   "MEX_QR"  "QR_GYR"  "QR_MEX"  "GYR_QR"  "GYR_MEX" "MEX_GYR" "GYR_GYR" "MEX_MEX" "MEX_W"  
 #[11] "GYR_W"   "QR_W"    "W_QR"
 #only 13 of the combination are realized compared to the crosstab
 
 ## Reclass 7 options out of 16, this is centering on options from QR point of view only!!!
 
-QR_QR <- a #internal consuption: C
-QR_GYR <- b #QR->GYR outflow: B
-GYR_QR <- c # inflow: A 
-QR_MEX <- d #d) QR->MX: B (outflow)
-MEX_QR <- e #e) QR<- MX: A (inflow) 
-QR_W <- f #f) QR->W: B (outflow)
-W_QR <- g #g) QR-<W: A (inflow)
+#QR_QR <- a #internal consuption: C
+#QR_GYR <- b #QR->GYR outflow: B
+#GYR_QR <- c # inflow: A 
+#QR_MEX <- d #d) QR->MX: B (outflow)
+#MEX_QR <- e #e) QR<- MX: A (inflow) 
+#QR_W <- f #f) QR->W: B (outflow)
+#W_QR <- g #g) QR-<W: A (inflow)
 
-tb$flow_types <- revalue(tb$, c("M"="1", "F"="2"))
-c(QR_QR <- a #internal consuption: C
-QR_GYR <- b #QR->GYR outflow: B
-GYR_QR <- c # inflow: A 
-QR_MEX <- d #d) QR->MX: B (outflow)
-MEX_QR <- e #e) QR<- MX: A (inflow) 
-QR_W <- f #f) QR->W: B (outflow)
-W_QR <- g #g) QR-<W: A (inflow)
-
-tb$flow_types <- revalue(data$sex, c("M"="1", "F"="2"))
-
+##Using revalue from plyr package!
+tb$flow_types <- revalue(tb$ORIG_DEST_HINT,
+                         c("QR_QR"  = "a", # internal consuption: C
+                           "QR_GYR" = "b", # QR->GYR outflow: B
+                           "GYR_QR" = "c", # inflow: A 
+                           "QR_MEX" = "d", # d) QR->MX: B (outflow)
+                           "MEX_QR" = "e", # e) QR<- MX: A (inflow) 
+                           "QR_W" = "f",   # f) QR->W: B (outflow)
+                           "W_QR" = "g")) # g) QR-<W: A (inflow)
 
 #Reclassify this and then classify in inflow and outlfow + 
-####
 
+tb$flow_direction <- revalue(tb$ORIG_DEST_HINT,
+                             c("QR_QR"  = "C", # internal consuption: C
+                               "QR_GYR" = "B", # QR->GYR outflow: B
+                               "GYR_QR" = "A", # inflow: A 
+                               "QR_MEX" = "B", # d) QR->MX: B (outflow)
+                               "MEX_QR" = "A", # e) QR<- MX: A (inflow) 
+                               "QR_W" = "B",   # f) QR->W: B (outflow)
+                               "W_QR" = "A")) # g) QR-<W: A (inflow)
+
+
+#### NOW LOOKING INTO REGRESSIONS
+
+# ANOVA/MANOVA comparing
+# 
+# Interaction between hinterland scales
+# 
+#Regression 1: a vs b+c
+#Regression 2: a vs d+e
+#Regression 3: a vs f+g
+#Regression 4: b+c vs d+e
+#Regression 5: b+c vs f+g
+#Regression 6: d+e vs f+g
+
+
+##Regression 1: a vs b+c
+
+#"QR_QR"  = "a", # internal consuption: C
+#"QR_GYR" = "b", # QR->GYR outflow: B
+#"GYR_QR" = "c", # inflow: A 
+
+tb$flow_types
 
 
 
 
 #################################  END OF FILE ###########################################
+
+
+# ANOVA/MANOVA comparing
+# 
+# Interaction between hinterland scales
+# 
+# a vs b+c
+# a vs d+e
+# a vs f+g
+# 
+# b+c vs d+e
+# b+c vs f+g
+# 
+# d+e vs f+g
+# 
+# Same but taking direction in mind
+# 
+# outflows only
+# 
+# b vs d vs f
+# 
+# inflows only
+# 
+# c, vs e vs g
+# 
+# all comparisons done in three types
+# 
+# movilizacion (=transactions, unitless, counts, we can put it in %)
+# meat (kg)
+# livestock (heads)
+# agrucultural producs (tones)
