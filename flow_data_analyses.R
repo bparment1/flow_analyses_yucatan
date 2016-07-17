@@ -2,13 +2,13 @@
 ########################### SPACE-TIME QUINTINARO PRODUCT DATABASE  #############################################
 #This script explores and analyzes data from the Quintinaro database of flow (food, wood etc).
 #Data was collected by Marco Millones
-#The goal is to run EOT, MEOT and PCA on the updated SST dataset using the IDRISI and the R package "remote".
+#The goal is to analyze flow from Quintinaro Roo understand region connnectness, sustainabilty and land cover change issues.
 #
-#AUTHOR: Benoit Parmentier                                                                       #
+#AUTHOR: Benoit Parmentier                                                                       
 #DATE CREATED:07/11/2016 
-#DATE MODIFIED: 07/16/2016
+#DATE MODIFIED: 07/17/2016
 #
-#PROJECT: MEOT/EOT climate variability extraction
+#PROJECT: Flow, land cover change with Marco Millones
 #
 ##################################################################################################
 #
@@ -38,9 +38,28 @@ library(plyr)
 #################################################
 ###### Functions  used in the script  ##########
 
-infile1_function <- file.path("/home/bparmentier/Google Drive/Papers_writing_MEOT/R_scripts/",
+create_dir_fun <- function(outDir,out_suffix){
+  #if out_suffix is not null then append out_suffix string
+  if(!is.null(out_suffix)){
+    out_name <- paste("output_",out_suffix,sep="")
+    outDir <- file.path(outDir,out_name)
+  }
+  #create if does not exists
+  if(!file.exists(outDir)){
+    dir.create(outDir)
+  }
+  return(outDir)
+}
+
+load_obj <- function(f){
+  env <- new.env()
+  nm <- load(f, env)[1]
+  env[[nm]]
+}
+
+#infile1_function <- file.path("/home/bparmentier/Google Drive/Papers_writing_MEOT/R_scripts/",
                               "PCA_EOT_comparison_data_update_function_07152016.R")
-source(infile1_function)
+#source(infile1_function)
 
 #############################################
 ######## Parameters and arguments  ########
@@ -207,6 +226,7 @@ tb$flow_direction <- revalue(tb$ORIG_DEST_HINT,
                                "W_QR" = "A")) # g) QR-<W: A (inflow)
 
 
+
 #### NOW LOOKING INTO REGRESSIONS
 
 # ANOVA/MANOVA comparing
@@ -227,10 +247,58 @@ tb$flow_direction <- revalue(tb$ORIG_DEST_HINT,
 #"QR_GYR" = "b", # QR->GYR outflow: B
 #"GYR_QR" = "c", # inflow: A 
 
-tb$flow_types
+#tb$flow_types
+
+## first subset the data for specific product and categories!!!
+
+#tb$y <- tb$IDMOVILIZA #rethink this in terms of counts from municipios?
+#tb$y <- 1
 
 
+#test <-subset(tb,tb$NOMPRODUCT=="BOVINOS/CARNE")
+test <- subset(tb,tb$SECCION=="AGRICOLA")
+test <- subset(test,test$flow_types%in% c("a","b","c"))
+test$y <- as.numeric(test$NV_CANT)
 
+#NV_CANT
+#tb$NOMPRODUCT
+#tb$SECCION
+
+### This is a quick ANOVA style regression (General Linear Model)
+mod <- lm(y ~ flow_types, data= test)
+summary(mod)
+
+#summary(mod)
+#
+#Call:
+#  lm(formula = y ~ flow_types, data = test)
+#
+#Residuals:
+#  Min     1Q Median     3Q    Max 
+#-155    -23     -3     -3 276325 
+#
+#Coefficients:
+#  Estimate Std. Error t value Pr(>|t|)    
+#(Intercept)    28.28      16.45   1.720   0.0855 .  
+#flow_typesb   126.71      24.34   5.206 1.93e-07 ***
+#  flow_typesc   -21.93      18.21  -1.204   0.2285    
+#---
+#  Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+#
+#Residual standard error: 1955 on 88648 degrees of freedom
+#(1 observation deleted due to missingness)
+#Multiple R-squared:  0.0006506,	Adjusted R-squared:  0.0006281 
+#F-statistic: 28.86 on 2 and 88648 DF,  p-value: 2.966e-13
+
+coef(mod)
+str(mod)
+#plot(mod)
+
+plot(coef(mod),type="h")
+plot(coef(mod),type="b",ylab="quant",main="Agriculture")
+
+## We need to extract the standard error and coef values for the slope of each type!!
+## Plot the coef val and CI for each categories
 
 #################################  END OF FILE ###########################################
 
