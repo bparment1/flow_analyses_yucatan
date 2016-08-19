@@ -6,7 +6,7 @@
 #
 #AUTHOR: Benoit Parmentier                                                                       
 #DATE CREATED:07/11/2016 
-#DATE MODIFIED: 07/17/2016
+#DATE MODIFIED: 08/19/2016
 #
 #PROJECT: Flow, land cover change with Marco Millones
 #
@@ -58,7 +58,7 @@ load_obj <- function(f){
 }
 
 #infile1_function <- file.path("/home/bparmentier/Google Drive/Papers_writing_MEOT/R_scripts/",
-                              "PCA_EOT_comparison_data_update_function_07152016.R")
+#                              "PCA_EOT_comparison_data_update_function_07152016.R")
 #source(infile1_function)
 
 #############################################
@@ -72,7 +72,7 @@ file_format <- ".rst" #PARAM 4
 NA_value <- -9999 #PARAM5
 NA_value_SST <- 32767
 NA_flag_val <- NA_value #PARAM6
-out_suffix <-"flow_07162016" #output suffix for the files and ouptu folder #PARAM 7
+out_suffix <-"flow_08162016" #output suffix for the files and ouptu folder #PARAM 7
 create_out_dir_param=TRUE #PARAM8
 num_cores <- 4 #PARAM 9
 
@@ -167,7 +167,7 @@ barplot(x)
 #  MEX-QR
 #  MEXICO-QR
 #  GYR-QR
-#Internal consumption: QR-WR
+#Internal consumption: QR-QR
 
 #a) QR<->QR
 #b) QR->GYR
@@ -188,8 +188,16 @@ print(xtb)
 #QR   40184  14564  33122      1
 #W        0      0      2      0
 
+### For this data only these ones are allowed:
+#       GYR    MEX     QR      W
+#GYR      0      0      1      0
+#MEX      0      0      1      0
+#QR       1      1      1      1
+#W        0      0      1      0
+
 tb$ORIG_DEST_HINT <- paste(tb$X1.9_ORIG_CVE_HINT,tb$X1.9_DEST_CVE_HINT,sep="_")
 unique(tb$ORIG_DEST_HINT)
+table(tb$ORIG_DEST_HINT)
 #[1] "QR_QR"   "MEX_QR"  "QR_GYR"  "QR_MEX"  "GYR_QR"  "GYR_MEX" "MEX_GYR" "GYR_GYR" "MEX_MEX" "MEX_W"  
 #[11] "GYR_W"   "QR_W"    "W_QR"
 #only 13 of the combination are realized compared to the crosstab
@@ -225,8 +233,39 @@ tb$flow_direction <- revalue(tb$ORIG_DEST_HINT,
                                "QR_W" = "B",   # f) QR->W: B (outflow)
                                "W_QR" = "A")) # g) QR-<W: A (inflow)
 
+test <- tb[tb$flow_direction=="GYR_GYR",]
+table(tb$flow_direction)
 
+class(tb$flow_direction)
+barplot(tb$flow_direction)
 
+table(tb$NV_UMEDIDA)
+
+tb$IDMOVILIZA
+
+### Date
+
+as.Date(tb$FECHA)
+tb$FECHA
+
+i <- 1
+
+date_item_str <- strsplit(tb$FECHA," ")[[i]][1]
+
+date_item <- as.Date(date_item_str ,format="%Y-%m-%d") #start date
+end_date <- as.Date(end_date,format="%Y-%m-%d") #end date
+dates_range <- seq.Date(start_date, end_date, by="1 day") #sequence of dates
+#dates_range_format <- as.Date(dates_range,format="%Y%m%d") #end date
+
+##Check if the range is over multiple years
+date_year <- strftime(dates_range, "%Y")
+date_month <- strftime(dates_range , "%m") # current month of the date being processed
+date_day <- strftime(dates_range , "%d")
+dates_range_prism_format <- paste(date_year,date_month,date_day,sep="")
+
+df_dates_range <- data.frame(dates_range_prism_format=dates_range_prism_format,
+                             dates_range=dates_range,
+                             year=date_year)
 #### NOW LOOKING INTO REGRESSIONS
 
 # ANOVA/MANOVA comparing
@@ -254,6 +293,8 @@ tb$flow_direction <- revalue(tb$ORIG_DEST_HINT,
 #tb$y <- tb$IDMOVILIZA #rethink this in terms of counts from municipios?
 #tb$y <- 1
 
+######################################
+### We need to subset: 
 
 #test <-subset(tb,tb$NOMPRODUCT=="BOVINOS/CARNE")
 test <- subset(tb,tb$SECCION=="AGRICOLA")
@@ -263,6 +304,17 @@ test$y <- as.numeric(test$NV_CANT)
 #NV_CANT
 #tb$NOMPRODUCT
 #tb$SECCION
+#tb$NV_UMEDIDA
+
+#Just cabeza and tonelada in NV_UMEDIDA
+#If seccion=agricola and nv_medida=tolenada then ag
+#if seccion= pecuario and nv_medida= tonelada then meat
+#if seccion= pecuario and nv_medida = cabeza then livestock 
+
+### Screening:
+
+#tb$CODPROD=86 (huevos), 95 (cormenas), 96 (miel), 97 (cerra=wax), 183 (pasterized eggs), 200 (quail eggs)
+
 
 ### This is a quick ANOVA style regression (General Linear Model)
 mod <- lm(y ~ flow_types, data= test)
