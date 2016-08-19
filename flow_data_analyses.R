@@ -125,6 +125,25 @@ tb <- read.table(file.path(inDir,filename_flow),
 
 names(tb)
 
+### First add date fields for each flow item/transaction
+
+l_dates <- lapply(1:length(tb$FECHA),
+                  FUN=function(i,x){date_item_str <- strsplit(x[[i]]," ")[[1]][1]; as.character(as.Date(date_item_str ,format="%m/%d/%Y"))},x=tb$FECHA)
+dates_range <- as.character(l_dates)
+
+#date_item <- as.Date(date_item_str ,format="%m/%d/%Y") #start date
+#dates_range_format <- as.Date(dates_range,format="%Y%m%d") #end date
+
+##Check if the range is over multiple years
+date_year <- strftime(dates_range, "%Y")
+date_month <- strftime(dates_range , "%m") # current month of the date being processed
+date_day <- strftime(dates_range , "%d")
+
+tb$dates <- dates_range
+tb$year <- date_year
+tb$month <- date_month
+tb$day <- date_day
+
 tb$X1.9_ORIG_CVE_HINT[tb$X1.9_ORIG_CVE_HINT=="MEXICO"] <- "MEX"
 tb$X1.9_DEST_CVE_HINT[tb$X1.9_DEST_CVE_HINT=="MEXICO"] <- "MEX"
 
@@ -233,12 +252,65 @@ tb$flow_direction <- revalue(tb$ORIG_DEST_HINT,
                                "QR_W" = "B",   # f) QR->W: B (outflow)
                                "W_QR" = "A")) # g) QR-<W: A (inflow)
 
-test <- tb[tb$flow_direction=="GYR_GYR",]
-table(tb$flow_direction)
+#test <- tb[tb$flow_direction=="GYR_GYR",]
+### Consider only flows within  Quintano Roo
 
-class(tb$flow_direction)
-barplot(tb$flow_direction)
+tb <- subset(tb,tb$flow_direction%in%c("A","B","C"))
 
+barplot(table(tb$flow_direction))
+ 
+######################################
+### We need to subset by product
+
+#test <-subset(tb,tb$NOMPRODUCT=="BOVINOS/CARNE")
+#test <- subset(tb,tb$SECCION=="AGRICOLA")
+#test <- subset(test,test$flow_types%in% c("a","b","c"))
+#test$y <- as.numeric(test$NV_CANT)
+
+#NV_CANT
+#tb$NOMPRODUCT
+#tb$SECCION
+#tb$NV_UMEDIDA
+
+### Screening:
+
+#exclude this values
+#tb$CODPROD=86 (huevos), 95 (cormenas), 96 (miel), 97 (cerra=wax), 183 (pasterized eggs), 200 (quail eggs)
+
+codes_to_remove <- c(86,95,96,97,183,200)
+
+tb <- tb[!tb$CODPROD %in% codes_to_remove,]
+
+tb$product_cat[tb$SECCION=="AGRICOLA" & tb$NV_UMEDIDA=="TONELADA"] <- "agri"
+tb$product_cat[tb$SECCION=="PECUARIO" & tb$NV_UMEDIDA=="TONELADA"] <- "meat"
+tb$product_cat[tb$SECCION=="PECUARIO" & tb$NV_UMEDIDA=="CABEZA"] <- "livestock"
+
+table(tb$product_cat)
+#Just cabeza and tonelada in NV_UMEDIDA
+#If seccion=agricola and nv_medida=tolenada then agri
+#if seccion= pecuario and nv_medida= tonelada then meat
+#if seccion= pecuario and nv_medida = cabeza then livestock 
+
+## 
+
+### Aggregate by year and product_cat
+
+#2001 to 2009
+
+aggregate()
+value_prod <- "agri"
+tb_subset <- subset(tb,tb$product_cat==value_prod)
+aggdata <-aggregate(tb_subset, by=list(tb_subset$year), 
+                    FUN=sum, na.rm=TRUE)
+
+### Apply the area factor
+
+
+###
+
+################## Analysis for number of truck
+## Agregate for mobilization #
+#if placa & fecha  are the same in 
 table(tb$NV_UMEDIDA)
 
 tb$IDMOVILIZA
@@ -250,22 +322,6 @@ tb$FECHA
 
 i <- 1
 
-date_item_str <- strsplit(tb$FECHA," ")[[i]][1]
-
-date_item <- as.Date(date_item_str ,format="%Y-%m-%d") #start date
-end_date <- as.Date(end_date,format="%Y-%m-%d") #end date
-dates_range <- seq.Date(start_date, end_date, by="1 day") #sequence of dates
-#dates_range_format <- as.Date(dates_range,format="%Y%m%d") #end date
-
-##Check if the range is over multiple years
-date_year <- strftime(dates_range, "%Y")
-date_month <- strftime(dates_range , "%m") # current month of the date being processed
-date_day <- strftime(dates_range , "%d")
-dates_range_prism_format <- paste(date_year,date_month,date_day,sep="")
-
-df_dates_range <- data.frame(dates_range_prism_format=dates_range_prism_format,
-                             dates_range=dates_range,
-                             year=date_year)
 #### NOW LOOKING INTO REGRESSIONS
 
 # ANOVA/MANOVA comparing
@@ -293,27 +349,6 @@ df_dates_range <- data.frame(dates_range_prism_format=dates_range_prism_format,
 #tb$y <- tb$IDMOVILIZA #rethink this in terms of counts from municipios?
 #tb$y <- 1
 
-######################################
-### We need to subset: 
-
-#test <-subset(tb,tb$NOMPRODUCT=="BOVINOS/CARNE")
-test <- subset(tb,tb$SECCION=="AGRICOLA")
-test <- subset(test,test$flow_types%in% c("a","b","c"))
-test$y <- as.numeric(test$NV_CANT)
-
-#NV_CANT
-#tb$NOMPRODUCT
-#tb$SECCION
-#tb$NV_UMEDIDA
-
-#Just cabeza and tonelada in NV_UMEDIDA
-#If seccion=agricola and nv_medida=tolenada then ag
-#if seccion= pecuario and nv_medida= tonelada then meat
-#if seccion= pecuario and nv_medida = cabeza then livestock 
-
-### Screening:
-
-#tb$CODPROD=86 (huevos), 95 (cormenas), 96 (miel), 97 (cerra=wax), 183 (pasterized eggs), 200 (quail eggs)
 
 
 ### This is a quick ANOVA style regression (General Linear Model)
