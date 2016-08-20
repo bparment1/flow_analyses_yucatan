@@ -64,35 +64,23 @@ load_obj <- function(f){
 #############################################
 ######## Parameters and arguments  ########
 
+#Input file name with the flow data
+filename_flow <- "MO1-9_ALL.txt"
+
 CRS_WGS84 <- "+proj=longlat +ellps=WGS84 +datum=WGS84 +towgs84=0,0,0" #Station coords WGS84 # CONST 2
 proj_str<- CRS_WGS84 #param 2
 CRS_reg <- CRS_WGS84 # PARAM 3
 
-file_format <- ".rst" #PARAM 4
+file_format <- ".txt" #PARAM 4
 NA_value <- -9999 #PARAM5
-NA_value_SST <- 32767
 NA_flag_val <- NA_value #PARAM6
 out_suffix <-"flow_08162016" #output suffix for the files and ouptu folder #PARAM 7
 create_out_dir_param=TRUE #PARAM8
 num_cores <- 4 #PARAM 9
 
-#station_data_fname <- file.path("/home/bparmentier/Google Drive/NEST/", "MHB_data_2006-2015.csv") #PARAM 11
-
-#years_to_process <- 2003:2016
-years_to_process <- 1982:2015
-#start_date <- "2012-01-01" #PARAM 12
-#end_date <- "2012-12-31" #PARAM 13 #should process by year!!!
-var_name <- "sst" #PARAM 14, Name of variable of interest: bacteria measurement (DMR data)
-scaling <- 1/0.0099999998
-
-r_mask_filename <- "/home/bparmentier/Google Drive/Papers_writing_MEOT/MEOT_paper/SST_data_update_1982_2015/lsmask.nc"
-
-#out_suffix <- "eot_pca_1982_2015_anom_07152016"
 inDir <- "/home/bparmentier/Google Drive/000_Flow_and_LUD_research/Quintana_Roo_Research/Data"
 setwd(inDir)
 
-#outDir <- "/Users/benoitparmentier/Dropbox/Data/Dissertation_paper2_04142012"
-#outDir <- "/home/bparmentier/Google Drive/Papers_writing_MEOT/EOT_paper"
 outDir <- inDir
 
 create_outDir_param = TRUE
@@ -105,9 +93,6 @@ if(create_outDir_param==TRUE){
 }else{
   setwd(outDir) #use previoulsy defined directory
 }
-
-filename_flow <- "MO1-9_ALL.txt"
-
 
 ########################################################
 ##############  Start of th script  ##############
@@ -131,21 +116,24 @@ l_dates <- lapply(1:length(tb$FECHA),
                   FUN=function(i,x){date_item_str <- strsplit(x[[i]]," ")[[1]][1]; as.character(as.Date(date_item_str ,format="%m/%d/%Y"))},x=tb$FECHA)
 dates_range <- as.character(l_dates)
 
-#date_item <- as.Date(date_item_str ,format="%m/%d/%Y") #start date
-#dates_range_format <- as.Date(dates_range,format="%Y%m%d") #end date
-
-##Check if the range is over multiple years
+##Convert dates range to year, month and day
 date_year <- strftime(dates_range, "%Y")
 date_month <- strftime(dates_range , "%m") # current month of the date being processed
 date_day <- strftime(dates_range , "%d")
 
+### Add dates
 tb$dates <- dates_range
-tb$year <- date_year
-tb$month <- date_month
-tb$day <- date_day
+tb$year <- as.numeric(date_year)
+tb$month <- as.numeric(date_month)
+tb$day <- as.numeric(date_day)
 
-tb$X1.9_ORIG_CVE_HINT[tb$X1.9_ORIG_CVE_HINT=="MEXICO"] <- "MEX"
-tb$X1.9_DEST_CVE_HINT[tb$X1.9_DEST_CVE_HINT=="MEXICO"] <- "MEX"
+## Screen by date: only allow 2001 to 2009
+
+tb <- subset(tb,tb$year> 2000 )
+
+### Fix naming convention for Hinterland variable
+tb$X1.9_ORIG_CVE_HINT[tb$X1.9_ORIG_CVE_HINT=="MEXICO"] <- "MEX" #Origin of product
+tb$X1.9_DEST_CVE_HINT[tb$X1.9_DEST_CVE_HINT=="MEXICO"] <- "MEX" #Destination of product
 
 #> unique(tb$X1.9_ORIG_CVE_HINT)
 #[1] "QR"  "MEX" "GYR" NA    ""    "W"  
@@ -253,6 +241,19 @@ tb$flow_direction <- revalue(tb$ORIG_DEST_HINT,
                                "W_QR" = "A")) # g) QR-<W: A (inflow)
 
 #test <- tb[tb$flow_direction=="GYR_GYR",]
+
+## Extraction is B+C (defined as comsumption of from land produced locally)
+#this is internal production which is exported (B) or consumed locally (C)
+tb$extraction[tb$flow_direction=="B" | tb$flow_direction=="C"] <- 1 
+tb$extraction[tb$flow_direction=="A"] <- 0
+table(tb$extraction)
+
+## Extraction is A+C (defined as comsumption of from land produced locally)
+#this is internal production which is exported (B) or consumed locally (C)
+tb$consumption[tb$flow_direction=="A" | tb$flow_direction=="C"] <- 1 
+tb$consumption[tb$flow_direction=="B"] <- 0
+table(tb$consumption)
+
 ### Consider only flows within  Quintano Roo
 
 tb <- subset(tb,tb$flow_direction%in%c("A","B","C"))
@@ -286,6 +287,7 @@ tb$product_cat[tb$SECCION=="PECUARIO" & tb$NV_UMEDIDA=="TONELADA"] <- "meat"
 tb$product_cat[tb$SECCION=="PECUARIO" & tb$NV_UMEDIDA=="CABEZA"] <- "livestock"
 
 table(tb$product_cat)
+
 #Just cabeza and tonelada in NV_UMEDIDA
 #If seccion=agricola and nv_medida=tolenada then agri
 #if seccion= pecuario and nv_medida= tonelada then meat
@@ -297,30 +299,85 @@ table(tb$product_cat)
 
 #2001 to 2009
 
-aggregate()
-value_prod <- "agri"
-tb_subset <- subset(tb,tb$product_cat==value_prod)
-aggdata <-aggregate(tb_subset, by=list(tb_subset$year), 
-                    FUN=sum, na.rm=TRUE)
+#First make sure we have numeric values
 
-### Apply the area factor
+tb$NV_CANT <- as.numeric(tb$NV_CANT)
+  
+#aggregate()
+#value_prod <- "agri"
+#tb_subset <- subset(tb,tb$product_cat==value_prod)
+#aggdata <-aggregate(tb_subset, by=list(as.integer(tb_subset$year)), 
+#                    FUN=sum, na.rm=TRUE)
+#aggregate(breaks ~ wool + tension, data = warpbreaks, mean)
+#test2 <- aggregate(NV_CANT ~ product_cat + year + flow_direction + extraction, data = tb, sum)
 
+test <- aggregate(NV_CANT ~ product_cat + year + flow_direction + extraction + consumption, data = tb, sum)
 
-###
+#  "QR_QR"  = "C", # internal consuption: C
+#  "QR_GYR" = "B", # QR->GYR outflow: B
+#  "GYR_QR" = "A", # inflow: A 
+
+## Extraction is B+C (defined as comsumption of from land produced locally)
+  
+### Make a loop later, this is to explore the data
+direction_val <- "A" #Inflow
+plot(NV_CANT~year,subset(test,test$product_cat=="livestock" & test$flow_direction==direction_val),type="b",main=paste("livestock",direction_val,sep=" "))
+plot(NV_CANT~year,subset(test,test$product_cat=="meat" & test$flow_direction==direction_val),type="b",main=paste("meat",direction_val,sep=" "))
+plot(NV_CANT~year,subset(test,test$product_cat=="agri" & test$flow_direction==direction_val),type="b",main=paste("agri",direction_val,sep=" "))
+
+direction_val <- "B" #Outflow
+plot(NV_CANT~year,subset(test,test$product_cat=="livestock" & test$flow_direction==direction_val),type="b",main=paste("livestock",direction_val,sep=" "))
+plot(NV_CANT~year,subset(test,test$product_cat=="meat" & test$flow_direction==direction_val),type="b",main=paste("meat",direction_val,sep=" "))
+plot(NV_CANT~year,subset(test,test$product_cat=="agri" & test$flow_direction==direction_val),type="b",main=paste("agri",direction_val,sep=" "))
+
+direction_val <- "C" #Internal flow (internal consumption)
+plot(NV_CANT~year,subset(test,test$product_cat=="livestock" & test$flow_direction==direction_val),type="b",main=paste("livestock",direction_val,sep=" "))
+plot(NV_CANT~year,subset(test,test$product_cat=="meat" & test$flow_direction==direction_val),type="b",main=paste("meat",direction_val,sep=" "))
+plot(NV_CANT~year,subset(test,test$product_cat=="agri" & test$flow_direction==direction_val),type="b",main=paste("agri",direction_val,sep=" "))
+
+xyplot(NV_CANT ~ year | product_cat + flow_direction,test,type="b")
+
+#### Writing the table
+write.table(test,file=paste("test_aggregated_data_by_flow_by_product_year_",out_suffix,".txt",sep=""),sep=",")
+
+## Look into extraction
+
+#xyplot(NV_CANT ~ year | extraction,test2)
+
+test2 <- aggregate(NV_CANT ~ product_cat + year + extraction, data = test, sum)
+test3 <- aggregate(NV_CANT ~ product_cat + year + consumption, data = test, sum)
+
+extraction_val <- 1 #B+C
+#plot(NV_CANT~year,subset(test2,test2$extraction=="livestock" & test$flow_direction==direction_val),type="b",main=paste("livestock",direction_val,sep=" "))
+#plot(NV_CANT~year,subset(test,test$product_cat=="meat" & test$flow_direction==direction_val),type="b",main=paste("meat",direction_val,sep=" "))
+direction_val <- "0" #A, inlfow
+plot(NV_CANT~year,subset(test2,test2$product_cat=="livestock" & test2$extraction==direction_val),type="b",col="blue",main=paste("livestock",direction_val,sep=" "))
+direction_val <- "1" #Internal flow + outflow (internal extraction)
+lines(NV_CANT~year,subset(test2,test2$product_cat=="livestock" & test2$extraction==direction_val),type="b",col="red",main=paste("livestock",direction_val,sep=" "))
+plot(NV_CANT~year,subset(test2,test2$product_cat=="livestock" & test2$extraction==direction_val),type="b",col="red",main=paste("livestock",direction_val,sep=" "))
+
+#### Writing the table
+write.table(test2,file=paste("test2_aggregated_data_by_exraction_by_product_year_",out_suffix,".txt",sep=""),sep=",")
+
+#### Writing the table
+write.table(test3,file=paste("test3_aggregated_data_by_comsumption_by_product_year_",out_suffix,".txt",sep=""),sep=",")
+
+### Apply the area factor for land
+
 
 ################## Analysis for number of truck
 ## Agregate for mobilization #
 #if placa & fecha  are the same in 
-table(tb$NV_UMEDIDA)
+#table(tb$NV_UMEDIDA)
 
-tb$IDMOVILIZA
+#tb$IDMOVILIZA
 
 ### Date
 
-as.Date(tb$FECHA)
-tb$FECHA
+#as.Date(tb$FECHA)
+#tb$FECHA
 
-i <- 1
+#i <- 1
 
 #### NOW LOOKING INTO REGRESSIONS
 
@@ -352,8 +409,8 @@ i <- 1
 
 
 ### This is a quick ANOVA style regression (General Linear Model)
-mod <- lm(y ~ flow_types, data= test)
-summary(mod)
+#mod <- lm(y ~ flow_types, data= test)
+#summary(mod)
 
 #summary(mod)
 #
@@ -377,12 +434,12 @@ summary(mod)
 #Multiple R-squared:  0.0006506,	Adjusted R-squared:  0.0006281 
 #F-statistic: 28.86 on 2 and 88648 DF,  p-value: 2.966e-13
 
-coef(mod)
-str(mod)
+#coef(mod)
+#str(mod)
 #plot(mod)
 
-plot(coef(mod),type="h")
-plot(coef(mod),type="b",ylab="quant",main="Agriculture")
+#plot(coef(mod),type="h")
+#plot(coef(mod),type="b",ylab="quant",main="Agriculture")
 
 ## We need to extract the standard error and coef values for the slope of each type!!
 ## Plot the coef val and CI for each categories
