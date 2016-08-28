@@ -244,6 +244,8 @@ tb$flow_direction <- revalue(tb$ORIG_DEST_HINT,
 #test <- tb[tb$flow_direction=="GYR_GYR",]
 
 
+
+
 ## Extraction is B+C (defined as comsumption of from land produced locally)
 #this is internal production which is exported (B) or consumed locally (C)
 tb$extraction[tb$flow_direction=="B" | tb$flow_direction=="C"] <- 1 
@@ -340,6 +342,7 @@ xyplot(NV_CANT ~ year | flow_direction,subset(test,test$product_cat=="meat"),typ
        main="meat")
 xyplot(NV_CANT ~ year | flow_direction,subset(test,test$product_cat=="agri"),type="b",
        main="agri")
+
 
 #### Writing the table
 write.table(test,file=paste("test_aggregated_data_by_flow_by_product_year_",out_suffix,".txt",sep=""),sep=",")
@@ -438,6 +441,94 @@ test <- aggregate(NV_CANT ~ product_cat + year + flow_direction + extraction + c
 #compare:a, b-c,d-e,f-g
 #compare:internal,GYR,MEX,W
 
+tb$flow_dist_cat <- revalue(tb$flow_types,
+                         c("a"  = "0", # internal consuption: C
+                           "b" = "1", # QR->GYR outflow: B
+                           "c" = "1", # inflow: A 
+                           "d" = "2", # d) QR->MX: B (outflow)
+                           "e" = "2", # e) QR<- MX: A (inflow) 
+                           "f" = "3",   # f) QR->W: B (outflow)
+                           "g" = "3")) # g) QR-<W: A (inflow)
+
+tb$NV_CANT <- as.numeric(tb$NV_CANT)
+tb_tmp <- subset(tb,tb$product_cat=="agri")
+tb_tmp$y <- tb_tmp$NV_CANT
+### This is a quick ANOVA style regression (General Linear Model)
+mod <- lm(y ~ flow_dist_cat, data= tb_tmp)
+summary(mod)
+barplot(table(tb_tmp$flow_dist_cat),main="agri",names.arg=c("QR","GYR","MEX","W"))
+
+mean_y <-tapply(tb_tmp$y,tb_tmp$flow_dist_cat, mean, na.rm=TRUE)
+sum_y <-tapply(tb_tmp$y,tb_tmp$flow_dist_cat, sum, na.rm=TRUE)
+barplot(sum_y,main="agri",names.arg=c("QR","GYR","MEX","W"))
+
+#### livestock,
+
+tb_tmp <- subset(tb,tb$product_cat=="livestock")
+tb_tmp$y <- tb_tmp$NV_CANT
+
+### This is a quick ANOVA style regression (General Linear Model)
+mod <- lm(y ~ flow_dist_cat, data= tb_tmp)
+summary(mod)
+barplot(table(tb_tmp$flow_dist_cat),names.arg=c("QR","GYR","MEX"),main="livestock")
+
+means <- sapply(tb_tmp$y, mean,na.rm=TRUE)
+sum_y <-tapply(tb_tmp$y,tb_tmp$flow_dist_cat, sum, na.rm=TRUE)
+barplot(sum_y,main="livestock",names.arg=c("QR","GYR","MEX"))
+
+##########################
+#### meat
+
+tb_tmp <- subset(tb,tb$product_cat=="meat")
+tb_tmp$y <- tb_tmp$NV_CANT
+
+### This is a quick ANOVA style regression (General Linear Model)
+mod <- lm(y ~ flow_dist_cat, data= tb_tmp)
+summary(mod)
+barplot(table(tb_tmp$flow_dist_cat),main="meat",names.arg=c("QR","GYR","MEX","MEX"))
+
+sd_y <-tapply(tb_tmp$y,tb_tmp$flow_dist_cat, sd, na.rm=TRUE)
+mean_y <-tapply(tb_tmp$y,tb_tmp$flow_dist_cat, mean, na.rm=TRUE)
+sum_y <-tapply(tb_tmp$y,tb_tmp$flow_dist_cat, sum, na.rm=TRUE)
+barplot(sum_y,main="meat",names.arg=c("QR","GYR","MEX","MEX"))
+
+plot(table(tmp[[3]]),type="h")
+plot(table(tmp[[2]]),type="h")
+plot(table(tmp[[1]]),type="h")
+
+
+#########################################
+## find all 7th of the month between two dates, the last being a 7th.
+range_dates<- range(tb_tmp$dates)
+#[1] "2001-01-01" "2009-11-25"
+
+st <- as.Date(range_dates[1])
+en <- as.Date(range_dates[2])
+dseq <- seq(st, en, by="month") #Creating monthly date sequence to create a time series from a data frame
+
+#dat_old_indices <- dat
+#l_dates <- (as.Date(tb_tmp$dates))
+
+## first summarize by dates!!!
+tb_by_dates <- aggregate(NV_CANT ~ product_cat + dates + flow_direction, data = tb, sum)
+
+tb_agri_by_dates <- subset(tb_by_dates,flow_direction=="A" & product_cat== "agri")
+
+tb_tmp_dz <- zoo(tb_agri_by_dates,as.Date(tb_agri_by_dates$dates)) #create zoo object from data.frame and date sequence object
+
+tb_tmp_dz$NV_CANT  <- as.numeric(tb_tmp_dz$NV_CANT)
+plot(as.numeric(tb_tmp_dz$NV_CANT))
+plot(as.numeric(tb_tmp_dz$NV_CANT),ylim=c(0,1000),xlim=c(1,400),type="l")
+
+#plot(tb_tmp_dz)
+#var_x <- 1:length(l_dates)
+#var_x_dz <- zoo(var_x,l_dates)
+
+range(tb_tmp_dz$NV_CANT)
+range(tb_tmp$NV_CANT,na.rm=T)
+
+plot(tb_tmp_dz$NV_CANT)
+plot(tb_tmp$NV_CANT)
 # ANOVA/MANOVA comparing
 # 
 # Interaction between hinterland scales
