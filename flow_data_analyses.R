@@ -2,11 +2,10 @@
 ########################### SPACE-TIME QUINTINARO PRODUCT DATABASE  #############################################
 #This script explores and analyzes data from the Quintinaro database of flow (food, wood etc).
 #Data was collected by Marco Millones
-#The goal is to analyze flow from Quintinaro Roo understand region connnectness, sustainabilty and land cover change issues.
 #
 #AUTHOR: Benoit Parmentier                                                                       
 #DATE CREATED:07/11/2016 
-#DATE MODIFIED: 08/19/2016
+#DATE MODIFIED: 08/28/2016
 #
 #PROJECT: Flow, land cover change with Marco Millones
 #
@@ -74,7 +73,7 @@ CRS_reg <- CRS_WGS84 # PARAM 3
 file_format <- ".txt" #PARAM 4
 NA_value <- -9999 #PARAM5
 NA_flag_val <- NA_value #PARAM6
-out_suffix <-"flow_08162016" #output suffix for the files and ouptu folder #PARAM 7
+out_suffix <-"flow_08282016" #output suffix for the files and ouptu folder #PARAM 7
 create_out_dir_param=TRUE #PARAM8
 num_cores <- 4 #PARAM 9
 
@@ -228,6 +227,8 @@ tb$flow_types <- revalue(tb$ORIG_DEST_HINT,
                            "MEX_QR" = "e", # e) QR<- MX: A (inflow) 
                            "QR_W" = "f",   # f) QR->W: B (outflow)
                            "W_QR" = "g")) # g) QR-<W: A (inflow)
+#compare:a, b-c,d-e,f-g
+#compare:internal,GYR,MEX,W
 
 #Reclassify this and then classify in inflow and outlfow + 
 
@@ -242,14 +243,15 @@ tb$flow_direction <- revalue(tb$ORIG_DEST_HINT,
 
 #test <- tb[tb$flow_direction=="GYR_GYR",]
 
+
 ## Extraction is B+C (defined as comsumption of from land produced locally)
 #this is internal production which is exported (B) or consumed locally (C)
 tb$extraction[tb$flow_direction=="B" | tb$flow_direction=="C"] <- 1 
 tb$extraction[tb$flow_direction=="A"] <- 0
 table(tb$extraction)
 
-## Extraction is A+C (defined as comsumption of from land produced locally)
-#this is internal production which is exported (B) or consumed locally (C)
+## Local Consumption is A+C (defined as comsumption of from import and locally produced food)
+#this is external produciton of food which is imported (A) or consumed locally (C)
 tb$consumption[tb$flow_direction=="A" | tb$flow_direction=="C"] <- 1 
 tb$consumption[tb$flow_direction=="B"] <- 0
 table(tb$consumption)
@@ -303,19 +305,15 @@ table(tb$product_cat)
 
 tb$NV_CANT <- as.numeric(tb$NV_CANT)
   
-#aggregate()
-#value_prod <- "agri"
-#tb_subset <- subset(tb,tb$product_cat==value_prod)
-#aggdata <-aggregate(tb_subset, by=list(as.integer(tb_subset$year)), 
-#                    FUN=sum, na.rm=TRUE)
-#aggregate(breaks ~ wool + tension, data = warpbreaks, mean)
-#test2 <- aggregate(NV_CANT ~ product_cat + year + flow_direction + extraction, data = tb, sum)
 
 test <- aggregate(NV_CANT ~ product_cat + year + flow_direction + extraction + consumption, data = tb, sum)
 
-#  "QR_QR"  = "C", # internal consuption: C
-#  "QR_GYR" = "B", # QR->GYR outflow: B
-#  "GYR_QR" = "A", # inflow: A 
+
+#   "C", # internal consuption: C
+#   = "B", # QR->GYR outflow: B
+#  "A", # inflow: A 
+
+test$comp <- test$consumption*2 + test$extraction*1
 
 ## Extraction is B+C (defined as comsumption of from land produced locally)
   
@@ -335,7 +333,13 @@ plot(NV_CANT~year,subset(test,test$product_cat=="livestock" & test$flow_directio
 plot(NV_CANT~year,subset(test,test$product_cat=="meat" & test$flow_direction==direction_val),type="b",main=paste("meat",direction_val,sep=" "))
 plot(NV_CANT~year,subset(test,test$product_cat=="agri" & test$flow_direction==direction_val),type="b",main=paste("agri",direction_val,sep=" "))
 
-xyplot(NV_CANT ~ year | product_cat + flow_direction,test,type="b")
+### Need to improve this code later on!!!
+xyplot(NV_CANT ~ year | flow_direction,subset(test,test$product_cat=="livestock"),type="b",
+       main="livestock")
+xyplot(NV_CANT ~ year | flow_direction,subset(test,test$product_cat=="meat"),type="b",
+       main="meat")
+xyplot(NV_CANT ~ year | flow_direction,subset(test,test$product_cat=="agri"),type="b",
+       main="agri")
 
 #### Writing the table
 write.table(test,file=paste("test_aggregated_data_by_flow_by_product_year_",out_suffix,".txt",sep=""),sep=",")
@@ -362,9 +366,50 @@ write.table(test2,file=paste("test2_aggregated_data_by_exraction_by_product_year
 #### Writing the table
 write.table(test3,file=paste("test3_aggregated_data_by_comsumption_by_product_year_",out_suffix,".txt",sep=""),sep=",")
 
+
+####################################################
+##### PLOTTING EXTRACTION FOR EACH PRODUCT #####
+
+xyplot(NV_CANT ~ year | extraction,subset(test2,test2$product_cat=="livestock"),type="b",
+       main="livestock")
+
+xyplot(NV_CANT ~ year | extraction,subset(test2,test2$product_cat=="meat"),type="b",
+       main="meat")
+
+xyplot(NV_CANT ~ year | extraction,subset(test2,test2$product_cat=="agri"),type="b",
+       main="agri")
+
+#range_val <- range(subset(test2,test2$product_cat=="livestock")$NV_CANT)
+#plot(NV_CANT ~ year, col="blue",type="b",ylim=range_val,
+#     data=subset(test2,test2$product_cat=="livestock" & test2$extraction==1) )
+
+#lines(NV_CANT ~ year, col="red",type="b",
+#      data=subset(test2,test2$product_cat=="livestock" & test2$extraction==0) )
+
+
+####################################################
+##### PLOTTING CONSUMPTION FOR EACH PRODUCT #####
+
+xyplot(NV_CANT ~ year | consumption,subset(test3,test3$product_cat=="livestock"),type="b",
+       main="livestock")
+
+xyplot(NV_CANT ~ year | consumption,subset(test3,test3$product_cat=="meat"),type="b",
+       main="meat")
+
+xyplot(NV_CANT ~ year | consumption,subset(test3,test3$product_cat=="agri"),type="b",
+       main="agri")
+
+
 ### Apply the area factor for land
 
+### Get an idea of export by year and hinterland category:
 
+#test <- aggregate(NV_CANT ~ product_cat + year + flow_direction + extraction + consumption, 
+#                  data = subset(tb,tb$, sum)
+
+test <- aggregate(NV_CANT ~ product_cat + year + flow_direction + extraction + consumption, 
+                                    data = tb, sum)
+                  
 ################## Analysis for number of truck
 ## Agregate for mobilization #
 #if placa & fecha  are the same in 
@@ -380,6 +425,18 @@ write.table(test3,file=paste("test3_aggregated_data_by_comsumption_by_product_ye
 #i <- 1
 
 #### NOW LOOKING INTO REGRESSIONS
+
+#tb$flow_types <- revalue(tb$ORIG_DEST_HINT,
+#                         c("QR_QR"  = "a", # internal consuption: C
+#                           "QR_GYR" = "b", # QR->GYR outflow: B
+#                           "GYR_QR" = "c", # inflow: A 
+#                           "QR_MEX" = "d", # d) QR->MX: B (outflow)
+#                           "MEX_QR" = "e", # e) QR<- MX: A (inflow) 
+#                           "QR_W" = "f",   # f) QR->W: B (outflow)
+#                          "W_QR" = "g")) # g) QR-<W: A (inflow)
+
+#compare:a, b-c,d-e,f-g
+#compare:internal,GYR,MEX,W
 
 # ANOVA/MANOVA comparing
 # 
