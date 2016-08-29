@@ -73,7 +73,7 @@ CRS_reg <- CRS_WGS84 # PARAM 3
 file_format <- ".txt" #PARAM 4
 NA_value <- -9999 #PARAM5
 NA_flag_val <- NA_value #PARAM6
-out_suffix <-"flow_08282016" #output suffix for the files and ouptu folder #PARAM 7
+out_suffix <-"flow_08302016" #output suffix for the files and ouptu folder #PARAM 7
 create_out_dir_param=TRUE #PARAM8
 num_cores <- 4 #PARAM 9
 
@@ -285,6 +285,12 @@ barplot(table(tb$flow_direction))
 codes_to_remove <- c(86,95,96,97,183,200)
 
 tb <- tb[!tb$CODPROD %in% codes_to_remove,]
+dim(tb)
+
+codes_to_keep <- c("TONELADA","CABEZA")
+
+tb <- tb[tb$NV_UMEDIDA %in% codes_to_keep,]
+dim(tb)
 
 tb$product_cat[tb$SECCION=="AGRICOLA" & tb$NV_UMEDIDA=="TONELADA"] <- "agri"
 tb$product_cat[tb$SECCION=="PECUARIO" & tb$NV_UMEDIDA=="TONELADA"] <- "meat"
@@ -492,13 +498,13 @@ mean_y <-tapply(tb_tmp$y,tb_tmp$flow_dist_cat, mean, na.rm=TRUE)
 sum_y <-tapply(tb_tmp$y,tb_tmp$flow_dist_cat, sum, na.rm=TRUE)
 barplot(sum_y,main="meat",names.arg=c("QR","GYR","MEX","MEX"))
 
-plot(table(tmp[[3]]),type="h")
-plot(table(tmp[[2]]),type="h")
-plot(table(tmp[[1]]),type="h")
-
+#plot(table(tmp[[3]]),type="h")
+#plot(table(tmp[[2]]),type="h")
+#plot(table(tmp[[1]]),type="h")
 
 #########################################
-## find all 7th of the month between two dates, the last being a 7th.
+## Exploring data extremes and time series.
+
 range_dates<- range(tb_tmp$dates)
 #[1] "2001-01-01" "2009-11-25"
 
@@ -513,12 +519,41 @@ dseq <- seq(st, en, by="month") #Creating monthly date sequence to create a time
 tb_by_dates <- aggregate(NV_CANT ~ product_cat + dates + flow_direction, data = tb, sum)
 
 tb_agri_by_dates <- subset(tb_by_dates,flow_direction=="A" & product_cat== "agri")
+class(tb_agri_by_dates$NV_CANT)
+sum(is.na(tb_agri_by_dates$NV_CANT))
+length((tb_agri_by_dates$NV_CANT))
 
 tb_tmp_dz <- zoo(tb_agri_by_dates,as.Date(tb_agri_by_dates$dates)) #create zoo object from data.frame and date sequence object
+class(tb_tmp_dz$NV_CANT)
+
+plot(tb_tmp_dz$NV_CANT)
+range(tb_tmp_dz$NV_CANT)
+range(tb_agri_by_dates$NV_CANT)
+
+max_pos <- which.max(tb_agri_by_dates$NV_CANT)
+tb_agri_by_dates[max_pos,]
+dim(tb[tb$dates==tb_agri_by_dates[max_pos,]$dates,])
+dim(tb)
+hist(tb[tb$dates==tb_agri_by_dates[max_pos,]$dates,]$NV_CANT)
+plot(table(tb[tb$dates==tb_agri_by_dates[max_pos,]$dates,]$NV_CANT),type="h")
+tb$y <- tb$NV_CANT
+
+tb_ordered <- tb[with(tb, order(y)), ]
+tb_ordered <- tb[ order(-tb[,58]), ]
+
+View(tb[tb$dates==tb_agri_by_dates[max_pos,]$dates,])
+
+
 
 tb_tmp_dz$NV_CANT  <- as.numeric(tb_tmp_dz$NV_CANT)
 plot(as.numeric(tb_tmp_dz$NV_CANT))
-plot(as.numeric(tb_tmp_dz$NV_CANT),ylim=c(0,1000),xlim=c(1,400),type="l")
+
+plot(as.numeric(tb_tmp_dz$NV_CANT) ~ dates,ylim=c(0,1000),xlim=c(1,400),type="l",
+     data=tb_tmp_dz)
+plot(NV_CANT ~ dates,ylim=c(0,1000),xlim=c(1,400),type="l",
+     data=tb_tmp_dz)
+plot(NV_CANT ~ dates,ylim=c(0,1000),xlim=c(1,400),type="l",
+     data=tb_agri_by_dates)
 
 #plot(tb_tmp_dz)
 #var_x <- 1:length(l_dates)
