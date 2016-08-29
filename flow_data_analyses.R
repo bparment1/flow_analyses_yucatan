@@ -96,8 +96,9 @@ if(create_outDir_param==TRUE){
 ########################################################
 ##############  Start of th script  ##############
 
-### PART 0: READ IN DATASETS RELATED TO TELECONNECTION AND PREVIOUS LOADINGS
-#http://geog.uoregon.edu/bartlein/courses/geog607/Rmd/netCDF_01.htm
+###########################################
+### PART 0: READ IN DATASETS RELATED TO FLOWS 
+
 
 #tb <- read.table(file.path(inDir,filename_flow),sep=",")
 #tb <- read.table(file.path(inDir,filename_flow),fill=T,sep=",")
@@ -244,8 +245,6 @@ tb$flow_direction <- revalue(tb$ORIG_DEST_HINT,
 #test <- tb[tb$flow_direction=="GYR_GYR",]
 
 
-
-
 ## Extraction is B+C (defined as comsumption of from land produced locally)
 #this is internal production which is exported (B) or consumed locally (C)
 tb$extraction[tb$flow_direction=="B" | tb$flow_direction=="C"] <- 1 
@@ -264,6 +263,10 @@ tb <- subset(tb,tb$flow_direction%in%c("A","B","C"))
 
 barplot(table(tb$flow_direction))
  
+###########################################
+### PART 1: SCREEN DATA VALUES FOR INCONSISTENCIES AND TO SELECT BASE PRODUCTS
+
+
 ######################################
 ### We need to subset by product
 
@@ -305,17 +308,134 @@ table(tb$product_cat)
 
 ## 
 
-### Aggregate by year and product_cat
-
-#2001 to 2009
-
 #First make sure we have numeric values
 
 tb$NV_CANT <- as.numeric(tb$NV_CANT)
   
+tb <- tb[!is.na(tb$NV_CANT),]
+
+tb$y <- tb$NV_CANT
+pos_col <- which(names(tb)=="y")
+#tb_ordered <- tb[with(tb, order(y)), ]
+tb_ordered <- tb[ order(-tb[,pos_col]), ]
+
+tb_ordered[1:100,c("NV_CANT","product_cat","flow_direction","TRANSLATION")]
+tb_ordered[101:200,c("NV_CANT","product_cat","flow_direction","TRANSLATION")]
+tb_ordered[201:300,c("NV_CANT","product_cat","flow_direction","TRANSLATION")]
+tb_ordered[301:400,c("NV_CANT","product_cat","flow_direction","TRANSLATION")]
+tb_ordered[401:500,c("NV_CANT","product_cat","flow_direction","TRANSLATION")]
+tb_ordered[501:600,c("NV_CANT","product_cat","flow_direction","TRANSLATION")]
+tb_ordered[601:700,c("NV_CANT","product_cat","flow_direction","TRANSLATION")]
+tb_ordered[701:800,c("NV_CANT","product_cat","flow_direction","TRANSLATION")]
+tb_ordered[801:900,c("NV_CANT","product_cat","flow_direction","TRANSLATION")]
+
+
+table(tb_ordered[1:100,]$TRANSLATION)
+table(tb_ordered[1:1000,]$TRANSLATION)
+ 
+table(tb_ordered[1:2000,]$TRANSLATION)    
+  
+table(tb_ordered[1:10000,]$TRANSLATION)  
+
+tb_ordered_agri <- subset(tb_ordered,tb$product_cat=="agri")
+tb_ordered[2000,]
+tb_ordered[10000,c("NV_CANT","product_cat","flow_direction","TRANSLATION")]
+
+#### Check for agri only
+tb_ordered_agri <- subset(tb_ordered,tb_ordered$product_cat=="agri")
+dim(tb_ordered_agri)
+tb_ordered_agri[1:30,c("NV_CANT","product_cat","flow_direction","TRANSLATION")]
+
+barplot(table(tb_ordered_meat$TRANSLATION))
+
+### Check for meat only
+
+tb_ordered_meat <- subset(tb_ordered,tb_ordered$product_cat=="meat")
+dim(tb_ordered_meat)
+tb_ordered_meat[1:40,c("NV_CANT","product_cat","flow_direction","FECHA","TRANSLATION")]
+tb_ordered_meat[1:40,c("NV_CANT","product_cat","flow_direction","FECHA","TRANSLATION")]
+
+View(tb_ordered_meat)
+#remove potential error
+val <- max(tb_ordered_meat$NV_CANT) #17000,GALLINAZA CHICKEN EXCREMENT FERTILIZER FROM MEAT CHICKENS
+row_to_remove <- which(tb$NV_CANT==val & tb$product_cat=="meat") 
+
+tb  <- tb[-row_to_remove,]
+
+#table(tb_ordered_meat$TRANSLATION)
+
+#test_tb <- tb[tb$SECCION=="AGRICOLA" & tb$NV_UMEDIDA=="TONELADA"] 
+#subset(tb,tb$)
+#& (tb$NV_CANT < 1000) ]
+
+#View(tb[tb$dates==tb_agri_by_dates[max_pos,]$dates,])
+
+#########################################
+## Exploring data extremes and time series.tb
+range_dates<- range(tb$dates)
+
+#range_dates<- range(tb_tmp$dates)
+#[1] "2001-01-01" "2009-11-25"
+
+st <- as.Date(range_dates[1])
+en <- as.Date(range_dates[2])
+dseq <- seq(st, en, by="day") #Creating monthly date sequence to create a time series from a data frame
+
+#dat_old_indices <- dat
+#l_dates <- (as.Date(tb_tmp$dates))
+
+## first summarize by dates!!!
+tb_by_dates <- aggregate(NV_CANT ~ product_cat + dates + flow_direction, data = tb, sum)
+
+tb_agri_by_dates <- subset(tb_by_dates,flow_direction=="A" & product_cat== "agri")
+class(tb_agri_by_dates$NV_CANT)
+sum(is.na(tb_agri_by_dates$NV_CANT))
+length((tb_agri_by_dates$NV_CANT))
+
+tb_tmp_dz <- zoo(tb_agri_by_dates,as.Date(tb_agri_by_dates$dates)) #create zoo object from data.frame and date sequence object
+class(tb_tmp_dz$NV_CANT)
+
+plot(tb_tmp_dz$NV_CANT)
+range(tb_tmp_dz$NV_CANT)
+range(tb_agri_by_dates$NV_CANT)
+
+max_pos <- which.max(tb_agri_by_dates$NV_CANT)
+tb_agri_by_dates[max_pos,]
+dim(tb[tb$dates==tb_agri_by_dates[max_pos,]$dates,])
+dim(tb)
+hist(tb[tb$dates==tb_agri_by_dates[max_pos,]$dates,]$NV_CANT)
+plot(table(tb[tb$dates==tb_agri_by_dates[max_pos,]$dates,]$NV_CANT),type="h")
+
+tb_tmp_dz$NV_CANT  <- as.numeric(tb_tmp_dz$NV_CANT)
+plot(as.numeric(tb_tmp_dz$NV_CANT))
+
+plot(as.numeric(tb_tmp_dz$NV_CANT) ~ dates,ylim=c(0,1000),xlim=c(1,400),type="l",
+     data=tb_tmp_dz)
+plot(NV_CANT ~ dates,ylim=c(0,1000),xlim=c(1,400),type="l",
+     data=tb_tmp_dz)
+plot(NV_CANT ~ dates,ylim=c(0,1000),xlim=c(1,400),type="l",
+     data=tb_agri_by_dates)
+
+#plot(tb_tmp_dz)
+#var_x <- 1:length(l_dates)
+#var_x_dz <- zoo(var_x,l_dates)
+
+range(tb_tmp_dz$NV_CANT)
+range(tb_tmp$NV_CANT,na.rm=T)
+
+plot(tb_tmp_dz$NV_CANT)
+plot(tb_tmp$NV_CANT)
+
+
+###########################################
+### PART 2: AGGREGATE  FLOWS BY TYPES AND DATES/YEARS
+####################################
+
+### Aggregate by year and product_cat
+
+#2001 to 2009
 
 test <- aggregate(NV_CANT ~ product_cat + year + flow_direction + extraction + consumption, data = tb, sum)
-
 
 #   "C", # internal consuption: C
 #   = "B", # QR->GYR outflow: B
@@ -502,68 +622,6 @@ barplot(sum_y,main="meat",names.arg=c("QR","GYR","MEX","MEX"))
 #plot(table(tmp[[2]]),type="h")
 #plot(table(tmp[[1]]),type="h")
 
-#########################################
-## Exploring data extremes and time series.
-
-range_dates<- range(tb_tmp$dates)
-#[1] "2001-01-01" "2009-11-25"
-
-st <- as.Date(range_dates[1])
-en <- as.Date(range_dates[2])
-dseq <- seq(st, en, by="month") #Creating monthly date sequence to create a time series from a data frame
-
-#dat_old_indices <- dat
-#l_dates <- (as.Date(tb_tmp$dates))
-
-## first summarize by dates!!!
-tb_by_dates <- aggregate(NV_CANT ~ product_cat + dates + flow_direction, data = tb, sum)
-
-tb_agri_by_dates <- subset(tb_by_dates,flow_direction=="A" & product_cat== "agri")
-class(tb_agri_by_dates$NV_CANT)
-sum(is.na(tb_agri_by_dates$NV_CANT))
-length((tb_agri_by_dates$NV_CANT))
-
-tb_tmp_dz <- zoo(tb_agri_by_dates,as.Date(tb_agri_by_dates$dates)) #create zoo object from data.frame and date sequence object
-class(tb_tmp_dz$NV_CANT)
-
-plot(tb_tmp_dz$NV_CANT)
-range(tb_tmp_dz$NV_CANT)
-range(tb_agri_by_dates$NV_CANT)
-
-max_pos <- which.max(tb_agri_by_dates$NV_CANT)
-tb_agri_by_dates[max_pos,]
-dim(tb[tb$dates==tb_agri_by_dates[max_pos,]$dates,])
-dim(tb)
-hist(tb[tb$dates==tb_agri_by_dates[max_pos,]$dates,]$NV_CANT)
-plot(table(tb[tb$dates==tb_agri_by_dates[max_pos,]$dates,]$NV_CANT),type="h")
-tb$y <- tb$NV_CANT
-
-tb_ordered <- tb[with(tb, order(y)), ]
-tb_ordered <- tb[ order(-tb[,58]), ]
-
-View(tb[tb$dates==tb_agri_by_dates[max_pos,]$dates,])
-
-
-
-tb_tmp_dz$NV_CANT  <- as.numeric(tb_tmp_dz$NV_CANT)
-plot(as.numeric(tb_tmp_dz$NV_CANT))
-
-plot(as.numeric(tb_tmp_dz$NV_CANT) ~ dates,ylim=c(0,1000),xlim=c(1,400),type="l",
-     data=tb_tmp_dz)
-plot(NV_CANT ~ dates,ylim=c(0,1000),xlim=c(1,400),type="l",
-     data=tb_tmp_dz)
-plot(NV_CANT ~ dates,ylim=c(0,1000),xlim=c(1,400),type="l",
-     data=tb_agri_by_dates)
-
-#plot(tb_tmp_dz)
-#var_x <- 1:length(l_dates)
-#var_x_dz <- zoo(var_x,l_dates)
-
-range(tb_tmp_dz$NV_CANT)
-range(tb_tmp$NV_CANT,na.rm=T)
-
-plot(tb_tmp_dz$NV_CANT)
-plot(tb_tmp$NV_CANT)
 # ANOVA/MANOVA comparing
 # 
 # Interaction between hinterland scales
