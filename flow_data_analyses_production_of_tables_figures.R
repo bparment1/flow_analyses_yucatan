@@ -156,7 +156,7 @@ layout_m <- c(1.5,1)
 
 png(png_filename1,
     height=480*layout_m[2],width=480*layout_m[1])
-print(p2)
+print(p1)
 dev.off()
 
 png(png_filename2,
@@ -169,5 +169,106 @@ png(png_filename3,
 print(p3)
 dev.off()
 
+#############################
+##### Figure 3: Extraction B+C
 
+#slide 8,9,10
 
+test2$extraction_val <- as.character(test2$extraction)
+
+test2$extraction_cat <- revalue(test2$extraction_val,
+                            c("0"  = "outside", 
+                              "1" = "inside")) 
+
+p4 <- xyplot(NV_CANT ~ year | extraction_cat,subset(test2,test2$product_cat=="livestock"),
+       type="b",
+       ylab="Head", 
+       main="Livestock flow extraction total by year ")
+
+p5 <- xyplot(NV_CANT ~ year | extraction_cat,subset(test2,test2$product_cat=="meat"),
+       type="b",
+       ylab="Tons", 
+       main="Meat flow extraction total by year ")
+
+p6 <- xyplot(NV_CANT ~ year | extraction_cat,subset(test2,test2$product_cat=="agri"),
+       type="b",
+       ylab="Tons",
+       main="Agriculture flow extraction total by year ")
+
+png_filename4 <- paste("Figure","_3a_","livestock_extraction_cat_",out_suffix,".png", sep="")
+png_filename5 <- paste("Figure","_3b_","meat_extraction_cat_",out_suffix,".png", sep="")
+png_filename6 <- paste("Figure","_3c_","agri_extraction_cat_",out_suffix,".png", sep="")
+
+layout_m <- c(1.5,1)
+
+png(png_filename4,
+    height=480*layout_m[2],width=480*layout_m[1])
+print(p4)
+dev.off()
+
+png(png_filename5,
+    height=480*layout_m[2],width=480*layout_m[1])
+print(p5)
+dev.off()
+
+png(png_filename6,
+    height=480*layout_m[2],width=480*layout_m[1])
+print(p6)
+dev.off()
+
+#############################
+##### Figure 4: consumption A+C
+
+#slide 8,9,10
+
+test3$consumption_val <- as.character(test3$consumption)
+
+test3$consumption_cat <- revalue(test3$consumption_val,
+                                c("0"  = "outside", 
+                                  "1" = "inside")) 
+
+## Local Consumption is A+C (defined as comsumption of from import and locally produced food)
+#this is external produciton of food which is imported (A) or consumed locally (C)
+# B is outflow (outside)
+# A+C is 
+
+p7 <- xyplot(NV_CANT ~ year | consumption_cat,subset(test3,test3$product_cat=="livestock"),
+             type="b",
+             ylab="Head", 
+             main="Livestock flow consumption total by year ")
+
+p8 <- xyplot(NV_CANT ~ year | consumption_cat,subset(test3,test3$product_cat=="meat"),
+             type="b",
+             ylab="Tons", 
+             main="Meat flow consumption total by year ")
+
+p9 <- xyplot(NV_CANT ~ year | consumption_cat,subset(test3,test3$product_cat=="agri"),
+             type="b",
+             ylab="Tons",
+             main="Agriculture flow consumption total by year ")
+
+png_filename7 <- paste("Figure","_4a_","livestock_consumption_cat_",out_suffix,".png", sep="")
+png_filename8 <- paste("Figure","_4b_","meat_consumption_cat_",out_suffix,".png", sep="")
+png_filename9 <- paste("Figure","_4c_","agri_consumption_cat_",out_suffix,".png", sep="")
+
+layout_m <- c(1.5,1)
+
+png(png_filename7,
+    height=480*layout_m[2],width=480*layout_m[1])
+print(p7)
+dev.off()
+
+png(png_filename8,
+    height=480*layout_m[2],width=480*layout_m[1])
+print(p8)
+dev.off()
+
+png(png_filename9,
+    height=480*layout_m[2],width=480*layout_m[1])
+print(p9)
+dev.off()
+
+#############################
+##### Figure 5: consumption A+C
+
+#slide 17,18,19
