@@ -76,6 +76,9 @@ flow_by_product_filename <- "test_aggregated_data_by_flow_by_product_year_flow_0
 flow_by_product_consumption_filename <- "test3_aggregated_data_by_comsumption_by_product_year_flow_08302016.txt"
 flow_by_product_extraction_filename <- "test2_aggregated_data_by_exraction_by_product_year_flow_08302016.txt"
 
+hinterland_by_product_sum_filename <- "hinterland_tb_product_sum_flow_08302016.txt"
+hinterland_year_by_product_sum_filename <- "hinterland_year_tb_product_sum_flow_08302016.txt"
+
 #tb_overall_flow_data_clean_flow_08302016.txt
 
 CRS_WGS84 <- "+proj=longlat +ellps=WGS84 +datum=WGS84 +towgs84=0,0,0" #Station coords WGS84 # CONST 2
@@ -124,13 +127,18 @@ test <- read.table(file.path(inDir,flow_by_product_filename),header=T,sep=",")
 test3 <- read.table(file.path(inDir,flow_by_product_consumption_filename),header=T,sep=",") 
 test2 <- read.table(file.path(inDir,flow_by_product_extraction_filename),header=T,sep=",") 
 
+#hinterland_by_product_sum_filename <- "hinterland_tb_product_sum_flow_08302016.txt"
+#hinterland_year_by_product_sum_filename <- "hinterland_year_tb_product_sum_flow_08302016.txt"
+
+hinterland_year_tb  <- read.table(file.path(inDir,hinterland_by_product_sum_filename),header=T,sep=",") 
+hinterland_tb  <- read.table(file.path(inDir,hinterland_year_by_product_sum_filename),header=T,sep=",")
+
 #############################
 ##### Figure 2
 
 #slide 4,5,6
 
 ### Need to improve this code later on!!!
-
 
 p1 <- xyplot(NV_CANT ~ year | flow_direction,subset(test,test$product_cat=="livestock"),
        type="b",
@@ -271,4 +279,75 @@ dev.off()
 #############################
 ##### Figure 5: consumption A+C
 
+
 #slide 17,18,19
+
+png_filename10 <- paste("Figure","_5a_","livestock_hinterland_cat_sum_",out_suffix,".png", sep="")
+png_filename11 <- paste("Figure","_5b_","meat_hinterland_cat_sum_",out_suffix,".png", sep="")
+png_filename12 <- paste("Figure","_5c_","agri_hinterland_cat_sum_",out_suffix,".png", sep="")
+
+hinterland_tb  <- read.table(file.path(inDir,hinterland_by_product_sum_filename),header=T,sep=",") 
+hinterland_year_tb  <- read.table(file.path(inDir,hinterland_year_by_product_sum_filename),header=T,sep=",")
+
+hinterland_year_tb$flow_dist_cat_val <- as.character(hinterland_year_tb$flow_dist_cat)
+
+hinterland_year_tb$flow_dist_hint <- revalue(hinterland_year_tb$flow_dist_cat_val,
+                         c("0" = "QR", 
+                           "1" = "GYR",
+                           "2" = "MEX", 
+                           "3" = "W")) 
+hinterland_year_tb$labels <- paste(hinterland_year_tb$year,hinterland_year_tb$flow_dist_hint)
+  
+layout_m <- c(1.5,1)
+
+
+#### Livestock hinterland
+
+#dates_val <- sort(rep(2001:2009,3))
+#x_labels <- paste(dates_val,rep(c("QR","GYR","MEX"),9),sep=" ")
+hint_tmp <- subset(hinterland_year_tb,hinterland_year_tb$product_cat=="livestock")
+x_labels <- hint_tmp$labels
+
+png(png_filename10,
+    height=480*layout_m[2],width=480*layout_m[1])
+barplot(hint_tmp$NV_CANT,names.arg=x_labels,las=2,
+        main="Livestock flows total quantities by hinterland category")
+
+dev.off()
+
+#### Meat hinterland
+
+#dates_val <- c(sort(rep(2001:2008,3)),rep(2009,4))
+#x_labels <- paste(dates_val,c(rep(c("QR","GYR","MEX"),8),c("QR","GYR","MEX","W")),sep=" ")
+hint_tmp <- subset(hinterland_year_tb,hinterland_year_tb$product_cat=="meat")
+x_labels <- hint_tmp$labels
+
+png(png_filename11,
+    height=480*layout_m[2],width=480*layout_m[1])
+
+barplot(hint_tmp$NV_CANT,names.arg=x_labels,las=2,
+        main="Meat flows total quantities by hinterland category")
+dev.off()
+
+
+#### Agri hinterland
+
+#dates_val <- hinterland_year_tb$labels
+
+hint_tmp <- subset(hinterland_year_tb,hinterland_year_tb$product_cat=="agri")
+x_labels <- hint_tmp$labels
+
+png(png_filename12,
+    height=480*layout_m[2],width=480*layout_m[1])
+
+barplot(hint_tmp$NV_CANT,names.arg=x_labels,las=2,
+        main="Agri flows total quantities by hinterland category")
+
+dev.off()
+
+
+################## END OF SCRIPT #####################
+
+
+
+
