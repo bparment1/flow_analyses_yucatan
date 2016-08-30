@@ -8,7 +8,7 @@
 #DATE MODIFIED: 08/30/2016
 #
 #PROJECT: Flow, land cover change with Marco Millones
-#COMMIT: Adding land conversion area
+#COMMIT: reading land data and comparing available land to land consumed
 #
 ##################################################################################################
 #
@@ -363,6 +363,7 @@ row_to_remove <- which(tb$NV_CANT==val & tb$product_cat=="meat")
 
 tb  <- tb[-row_to_remove,]
 
+
 #table(tb_ordered_meat$TRANSLATION)
 
 #test_tb <- tb[tb$SECCION=="AGRICOLA" & tb$NV_UMEDIDA=="TONELADA"] 
@@ -370,6 +371,10 @@ tb  <- tb[-row_to_remove,]
 #& (tb$NV_CANT < 1000) ]
 
 #View(tb[tb$dates==tb_agri_by_dates[max_pos,]$dates,])
+
+#filename_flow 
+out_filename <- file.path(outDir,paste("tb_overall_flow_data_clean_",out_suffix,".txt",sep=""))
+write.table(tb,file=out_filename,sep=",")
 
 #########################################
 ## Exploring data extremes and time series.tb
@@ -624,29 +629,46 @@ barplot(sum_y,main="meat",names.arg=c("QR","GYR","MEX","MEX"))
 
 ### Step 1: conversion of flow to land use
 
+#http://www.fao.org/ag/agp/agpc/doc/counprof/mexico/Mexico.htm
+#http://www.fao.org/docrep/010/a0701e/a0701e00.HTM
+
 #1. isolate  'bovino' from the aggregate livestock category, but you can try including 'caprino' and 'porcino' and 'ovino' as well
 #select all that contain 'bovino' or 'caprino' or 'porcino' AND 'cabezas'
 
-#Stocking rates fo from 0.5 1 AU (head) per ha. for Mexico, tropical areas are more extensive 0.3. If we use 1 head per ha we are being generous
+#Stocking rates from 0.5 1 AU (head) per ha. for Mexico, tropical areas are more extensive 0.3. If we use 1 head per ha we are being generous
 
 tb_livestock <- subset(tb,tb$product_cat=="livestock" & tb$consumption==1)
 dim(tb_livestock)
 table(tb_livestock$NOMPRODUCT)
+
+#> names(table(tb_livestock$NOMPRODUCT))
+#[1] "ANIMALES CIRCO"          "ANIMALES ESPECTACULOS"   "AVES EN PIE"            
+#[4] "AVESTRUZ"                "BECERROS"                "BOVINOS EN PIE"         
+#[7] "BOVINOS EN PIE DE CRIA"  "CAPRINOS EN PIE"         "DESTETES BOVINO"        
+#[10] "DESTETES PORCINO"        "EQUINOS EN PIE"          "NOVILLOS"               
+#[13] "OTROS"                   "OTROS EN PIE"            "OVINOS EN PIE"          
+#[16] "PAVOS EN PIE"            "POLLITOS"                "PORCINOS EN PIE"        
+#[19] "PORCINOS EN PIE DE CRIA" "VACAS"                   "VENADOS EN PIE"      
+
 names(table(tb_livestock$NOMPRODUCT))
 names(table(tb_livestock$TRANSLATION))
 barplot(table(tb_livestock$NOMPRODUCT),names.arg=names(table(tb_livestock$NOMPRODUCT)),las=2)
 
 #should calves be in?
-selected_livestock <- c("BOVINOS EN PIE","BOVINOS EN PIE DE CRIA","DESTETES BOVINO","BOVINOS EN PIE DE CRIA")
+selected_livestock1 <- c("BOVINOS EN PIE","BOVINOS EN PIE DE CRIA","DESTETES BOVINO","BOVINOS EN PIE DE CRIA")
 
 additional_cat1 <- c("CAPRINOS EN PIE","PORCINOS EN PIE DE CRIA","PORCINOS EN PIE","DESTETES PORCINO")
 additional_cat2 <- c("vacas")
+
+selected_livestock <- c(selected_livestock,additional_cat1,additional_cat1)
 
 tb_to_convert <- subset(tb_livestock ,tb_livestock$NOMPRODUCT %in% selected_livestock)
 
 table(tb_to_convert$NV_UMEDIDA) #OK all cabeza
 
-conversion_rate <- c(0.3,0.5,1)
+#Stocking rates from 0.5 1 AU (head) per ha. for Mexico, tropical areas are more extensive 0.3. If we use 1 head per ha we are being generous
+
+conversion_rate <- 1/c(0.3,0.5,1) #this corresponds to head per ha
 
 tb_to_convert$land_consumption1 <- tb_to_convert$NV_CANT*conversion_rate[1]
 tb_to_convert$land_consumption2 <- tb_to_convert$NV_CANT*conversion_rate[2]
@@ -664,9 +686,6 @@ total_land_consumed3 <- sum(tb_to_convert$land_consumption3) #this is in ha
 
 #FP NFP CH  use NFP + CH
 
-#http://www.fao.org/ag/agp/agpc/doc/counprof/mexico/Mexico.htm
-#http://www.fao.org/docrep/010/a0701e/a0701e00.HTM
-
 in_dir_CI_data <- "/home/bparmentier/Google Drive/FireYuca_2016/"
 data_CI_fname <- "/home/bparmentier/Google Drive/FireYuca_2016/datasets/Firedata_05182016.txt" #contains the whole dataset
 state_fname <- "/home/bparmentier/Google Drive/FireYuca_2016/IN_QGIS/State_dis_from_muni.shp"
@@ -683,11 +702,11 @@ data_df <-read.table(data_CI_fname,stringsAsFactors=F,header=T,sep=",")
 #data_Hansen <-read.table(data_CI_fname,stringsAsFactors=F,header=T,sep=",")
 
 #Create the count variable
-fire_modis_col <- c("FIRE_2000","FIRE_2001","FIRE_2002","FIRE_2003","FIRE_2004","FIRE_2005","FIRE_2006","FIRE_2007")
-data_df$FIRE_freq <- data_df$FIRE_2000 + data_df$FIRE_2001 + data_df$FIRE_2002 + data_df$FIRE_2003 + data_df$FIRE_2004 + data_df$FIRE_2005 + data_df$FIRE_2006 + data_df$FIRE_2007 
-data_df$FIRE_intensity <- data_df$FIRE_freq/8
-data_df$FIRE_bool <- data_df$FIRE_freq > 0
-data_df$FIRE_bool <- as.numeric(data_df$FIRE_bool)
+#fire_modis_col <- c("FIRE_2000","FIRE_2001","FIRE_2002","FIRE_2003","FIRE_2004","FIRE_2005","FIRE_2006","FIRE_2007")
+#data_df$FIRE_freq <- data_df$FIRE_2000 + data_df$FIRE_2001 + data_df$FIRE_2002 + data_df$FIRE_2003 + data_df$FIRE_2004 + data_df$FIRE_2005 + data_df$FIRE_2006 + data_df$FIRE_2007 
+#data_df$FIRE_intensity <- data_df$FIRE_freq/8
+#data_df$FIRE_bool <- data_df$FIRE_freq > 0
+#data_df$FIRE_bool <- as.numeric(data_df$FIRE_bool)
 
 data_df_spdf <- data_df
 coordinates(data_df_spdf) <- coord_names
@@ -698,6 +717,84 @@ proj4string(data_df_spdf) <- proj4string(state_outline)
 l_poly <- over(data_df_spdf,state_outline) #points in polygon operation
 l_poly[[id_name]] <- data_df_spdf[[id_name]]
 data_df_spdf<- merge(data_df_spdf,l_poly,by=id_name)
+
+data_df_spdf$state <- as.character(data_df_spdf$FIRST_NOM_)
+table(data_df_spdf$state)
+sum(table(data_df_spdf$state))
+nrow(data_df_spdf)
+#> sum(table(data_df_spdf$state))
+#[1] 136311
+#> nrow(data_df_spdf)
+#[1] 136904
+
+spplot(data_df_spdf,"cattledensity")
+spplot(data_df_spdf,"FIRE_pre07")
+spplot(data_df_spdf,"dist_roads")
+spplot(data_df_spdf,"state")
+#data_df_spdf$state
+
+table(data_df_spdf$fpnfpch)#"fpnfpch"
+
+land_area <- table(data_df_spdf$state)
+land_area <- land_area*1/0.01
+
+total_land_consumed3
+
+#NFP + CH
+(table(data_df_spdf$state))
+
+data_df_spdf_qr <- subset(data_df_spdf,state=="Quintana Roo")
+names(data_df_spdf_qr)
+data_df_spdf_qr$land_consumed <- data_df_spdf_qr$nfp + data_df_spdf_qr$ch
+
+land_consumed_qr <- data_df_spdf_qr$land_consumed*1/0.01
+
+total_land_consumed_qr <- sum(land_consumed_qr)
+
+ratio_used <- c(
+total_land_consumed1/total_land_consumed_qr,
+total_land_consumed2/total_land_consumed_qr,
+total_land_consumed3/total_land_consumed_qr)
+
+df_land_consumed1 <- data.frame(ratio_used,conversion_rate)
+
+
+length(unique(tb$IDMOVILIZA))
+#dim(tb)
+
+##### More conservative scenario:
+
+#should calves be in?
+selected_livestock1 <- c("BOVINOS EN PIE","BOVINOS EN PIE DE CRIA","DESTETES BOVINO","BOVINOS EN PIE DE CRIA")
+
+additional_cat1 <- c("CAPRINOS EN PIE","PORCINOS EN PIE DE CRIA","PORCINOS EN PIE","DESTETES PORCINO")
+additional_cat2 <- c("vacas")
+
+#selected_livestock <- c(selected_livestock,additional_cat1,additional_cat1)
+selected_livestock <- c(selected_livestock1,additional_cat2)
+
+tb_to_convert <- subset(tb_livestock ,tb_livestock$NOMPRODUCT %in% selected_livestock)
+
+#Stocking rates from 0.5 1 AU (head) per ha. for Mexico, tropical areas are more extensive 0.3. If we use 1 head per ha we are being generous
+
+conversion_rate <- 1/c(0.3,0.5,1) #this corresponds to head per ha
+
+tb_to_convert$land_consumption1 <- tb_to_convert$NV_CANT*conversion_rate[1]
+tb_to_convert$land_consumption2 <- tb_to_convert$NV_CANT*conversion_rate[2]
+tb_to_convert$land_consumption3 <- tb_to_convert$NV_CANT*conversion_rate[3]
+
+total_land_consumed1 <- sum(tb_to_convert$land_consumption1) #this is in ha
+total_land_consumed2 <- sum(tb_to_convert$land_consumption2) #this is in ha
+total_land_consumed3 <- sum(tb_to_convert$land_consumption3) #this is in ha
+
+ratio_used <- c(
+  total_land_consumed1/total_land_consumed_qr,
+  total_land_consumed2/total_land_consumed_qr,
+  total_land_consumed3/total_land_consumed_qr)
+
+df_land_consumed2 <- data.frame(ratio_used,conversion_rate)
+
+df_land_consumed <- rbind(df_land_consumed1,df_land_consumed2)
 
 #################################  END OF FILE ###########################################
 
