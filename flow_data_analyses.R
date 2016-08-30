@@ -264,6 +264,20 @@ tb <- subset(tb,tb$flow_direction%in%c("A","B","C"))
 
 barplot(table(tb$flow_direction))
  
+### For Hinterland analyses
+
+#compare:a, b-c,d-e,f-g
+#compare:internal,GYR,MEX,W
+
+tb$flow_dist_cat <- revalue(tb$flow_types,
+                            c("a"  = "0", # internal consuption: C
+                              "b" = "1", # QR->GYR outflow: B
+                              "c" = "1", # inflow: A 
+                              "d" = "2", # d) QR->MX: B (outflow)
+                              "e" = "2", # e) QR<- MX: A (inflow) 
+                              "f" = "3",   # f) QR->W: B (outflow)
+                              "g" = "3")) # g) QR-<W: A (inflow)
+
 ###########################################
 ### PART 1: SCREEN DATA VALUES FOR INCONSISTENCIES AND TO SELECT BASE PRODUCTS
 
@@ -545,49 +559,40 @@ xyplot(NV_CANT ~ year | consumption,subset(test3,test3$product_cat=="agri"),type
 test_all <- aggregate(NV_CANT ~ product_cat + year + flow_direction + extraction + consumption, 
                                     data = tb, sum)
                   
-################## Analysis for number of truck
-## Agregate for mobilization #
-#if placa & fecha  are the same in 
-#table(tb$NV_UMEDIDA)
-
-#tb$IDMOVILIZA
-
-### Date
-
-#as.Date(tb$FECHA)
-#tb$FECHA
-
-#i <- 1
-
-#### NOW LOOKING INTO REGRESSIONS
-
-#tb$flow_types <- revalue(tb$ORIG_DEST_HINT,
-#                         c("QR_QR"  = "a", # internal consuption: C
-#                           "QR_GYR" = "b", # QR->GYR outflow: B
-#                           "GYR_QR" = "c", # inflow: A 
-#                           "QR_MEX" = "d", # d) QR->MX: B (outflow)
-#                           "MEX_QR" = "e", # e) QR<- MX: A (inflow) 
-#                           "QR_W" = "f",   # f) QR->W: B (outflow)
-#                          "W_QR" = "g")) # g) QR-<W: A (inflow)
+################## Hinterland Analyses ######
 
 #compare:a, b-c,d-e,f-g
 #compare:internal,GYR,MEX,W
 
-tb$flow_dist_cat <- revalue(tb$flow_types,
-                         c("a"  = "0", # internal consuption: C
-                           "b" = "1", # QR->GYR outflow: B
-                           "c" = "1", # inflow: A 
-                           "d" = "2", # d) QR->MX: B (outflow)
-                           "e" = "2", # e) QR<- MX: A (inflow) 
-                           "f" = "3",   # f) QR->W: B (outflow)
-                           "g" = "3")) # g) QR-<W: A (inflow)
+#tb$flow_dist_cat <- revalue(tb$flow_types,
+#                         c("a"  = "0", # internal consuption: C
+#                           "b" = "1", # QR->GYR outflow: B
+#                           "c" = "1", # inflow: A 
+#                           "d" = "2", # d) QR->MX: B (outflow)
+#                          "e" = "2", # e) QR<- MX: A (inflow) 
+#                          "f" = "3",   # f) QR->W: B (outflow)
+#                           "g" = "3")) # g) QR-<W: A (inflow)
 
 tb$NV_CANT <- as.numeric(tb$NV_CANT)
+
+#hinterland_tb <- aggregate(NV_CANT ~ product_cat + year + flow_direction + extraction + consumption, 
+#                      data = tb, sum)
+
+hinterland_year_tb <- aggregate(NV_CANT ~ flow_dist_cat + product_cat + year, 
+                           data = tb, sum)
+
+hinterland_tb <- aggregate(NV_CANT ~ flow_dist_cat + product_cat, 
+                           data = tb, sum)
+
+#### Writing the table
+write.table(hinterland_tb,file=paste("hinterland_tb_product_sum_",out_suffix,".txt",sep=""),sep=",")
+write.table(hinterland_year_tb,file=paste("hinterland_year_tb_product_sum_",out_suffix,".txt",sep=""),sep=",")
+
+#####
+
 tb_tmp <- subset(tb,tb$product_cat=="agri")
 tb_tmp$y <- tb_tmp$NV_CANT
-### This is a quick ANOVA style regression (General Linear Model)
-mod <- lm(y ~ flow_dist_cat, data= tb_tmp)
-summary(mod)
+
 barplot(table(tb_tmp$flow_dist_cat),main="agri",names.arg=c("QR","GYR","MEX","W"))
 
 mean_y <-tapply(tb_tmp$y,tb_tmp$flow_dist_cat, mean, na.rm=TRUE)
@@ -615,8 +620,6 @@ tb_tmp <- subset(tb,tb$product_cat=="meat")
 tb_tmp$y <- tb_tmp$NV_CANT
 
 ### This is a quick ANOVA style regression (General Linear Model)
-mod <- lm(y ~ flow_dist_cat, data= tb_tmp)
-summary(mod)
 barplot(table(tb_tmp$flow_dist_cat),main="meat",names.arg=c("QR","GYR","MEX","MEX"))
 
 sd_y <-tapply(tb_tmp$y,tb_tmp$flow_dist_cat, sd, na.rm=TRUE)
@@ -627,58 +630,7 @@ barplot(sum_y,main="meat",names.arg=c("QR","GYR","MEX","MEX"))
 ##########################
 #### PART 4: CONVERSION OF FLOWS INTO LAND AREA
 
-### Step 1: conversion of flow to land use
-
-#http://www.fao.org/ag/agp/agpc/doc/counprof/mexico/Mexico.htm
-#http://www.fao.org/docrep/010/a0701e/a0701e00.HTM
-
-#1. isolate  'bovino' from the aggregate livestock category, but you can try including 'caprino' and 'porcino' and 'ovino' as well
-#select all that contain 'bovino' or 'caprino' or 'porcino' AND 'cabezas'
-
-#Stocking rates from 0.5 1 AU (head) per ha. for Mexico, tropical areas are more extensive 0.3. If we use 1 head per ha we are being generous
-
-tb_livestock <- subset(tb,tb$product_cat=="livestock" & tb$consumption==1)
-dim(tb_livestock)
-table(tb_livestock$NOMPRODUCT)
-
-#> names(table(tb_livestock$NOMPRODUCT))
-#[1] "ANIMALES CIRCO"          "ANIMALES ESPECTACULOS"   "AVES EN PIE"            
-#[4] "AVESTRUZ"                "BECERROS"                "BOVINOS EN PIE"         
-#[7] "BOVINOS EN PIE DE CRIA"  "CAPRINOS EN PIE"         "DESTETES BOVINO"        
-#[10] "DESTETES PORCINO"        "EQUINOS EN PIE"          "NOVILLOS"               
-#[13] "OTROS"                   "OTROS EN PIE"            "OVINOS EN PIE"          
-#[16] "PAVOS EN PIE"            "POLLITOS"                "PORCINOS EN PIE"        
-#[19] "PORCINOS EN PIE DE CRIA" "VACAS"                   "VENADOS EN PIE"      
-
-names(table(tb_livestock$NOMPRODUCT))
-names(table(tb_livestock$TRANSLATION))
-barplot(table(tb_livestock$NOMPRODUCT),names.arg=names(table(tb_livestock$NOMPRODUCT)),las=2)
-
-#should calves be in?
-selected_livestock1 <- c("BOVINOS EN PIE","BOVINOS EN PIE DE CRIA","DESTETES BOVINO","BOVINOS EN PIE DE CRIA")
-
-additional_cat1 <- c("CAPRINOS EN PIE","PORCINOS EN PIE DE CRIA","PORCINOS EN PIE","DESTETES PORCINO")
-additional_cat2 <- c("vacas")
-
-selected_livestock <- c(selected_livestock,additional_cat1,additional_cat1)
-
-tb_to_convert <- subset(tb_livestock ,tb_livestock$NOMPRODUCT %in% selected_livestock)
-
-table(tb_to_convert$NV_UMEDIDA) #OK all cabeza
-
-#Stocking rates from 0.5 1 AU (head) per ha. for Mexico, tropical areas are more extensive 0.3. If we use 1 head per ha we are being generous
-
-conversion_rate <- 1/c(0.3,0.5,1) #this corresponds to head per ha
-
-tb_to_convert$land_consumption1 <- tb_to_convert$NV_CANT*conversion_rate[1]
-tb_to_convert$land_consumption2 <- tb_to_convert$NV_CANT*conversion_rate[2]
-tb_to_convert$land_consumption3 <- tb_to_convert$NV_CANT*conversion_rate[3]
-
-total_land_consumed1 <- sum(tb_to_convert$land_consumption1) #this is in ha
-total_land_consumed2 <- sum(tb_to_convert$land_consumption2) #this is in ha
-total_land_consumed3 <- sum(tb_to_convert$land_consumption3) #this is in ha
-
-### Step 2: conversion of flow to land use
+### Step 1: Get the area covered by Quintaroo and available land for products
 
 #Use the CI land cover map in the Fire analysis script. There are 3 maps
 #1990, 2000 and 2007
@@ -738,7 +690,7 @@ table(data_df_spdf$fpnfpch)#"fpnfpch"
 land_area <- table(data_df_spdf$state)
 land_area <- land_area*1/0.01
 
-total_land_consumed3
+#total_land_consumed3
 
 #NFP + CH
 (table(data_df_spdf$state))
@@ -749,7 +701,82 @@ data_df_spdf_qr$land_consumed <- data_df_spdf_qr$nfp + data_df_spdf_qr$ch
 
 land_consumed_qr <- data_df_spdf_qr$land_consumed*1/0.01
 
-total_land_consumed_qr <- sum(land_consumed_qr)
+total_land_consumed_qr <- sum(land_consumed_qr) #This is the total land available
+
+###### NOW SELECT PRODUCT AND COMPARE TO AVAILABLE LAND
+### Step 1: conversion of flow to land use
+
+#http://www.fao.org/ag/agp/agpc/doc/counprof/mexico/Mexico.htm
+#http://www.fao.org/docrep/010/a0701e/a0701e00.HTM
+
+#1. isolate  'bovino' from the aggregate livestock category, but you can try including 'caprino' and 'porcino' and 'ovino' as well
+#select all that contain 'bovino' or 'caprino' or 'porcino' AND 'cabezas'
+
+#Stocking rates from 0.5 1 AU (head) per ha. for Mexico, tropical areas are more extensive 0.3. If we use 1 head per ha we are being generous
+tb_livestock_all <- subset(tb,tb$product_cat=="livestock")
+tb_summarized_all <- aggregate(NV_CANT ~ year,data=tb_livestock_all,sum)
+  
+plot(NV_CANT ~ year,data=tb_summarized_all)
+
+tb_livestock <- subset(tb,tb$product_cat=="livestock" & tb$consumption==1)
+dim(tb_livestock)
+table(tb_livestock$NOMPRODUCT)
+
+#> names(table(tb_livestock$NOMPRODUCT))
+#[1] "ANIMALES CIRCO"          "ANIMALES ESPECTACULOS"   "AVES EN PIE"            
+#[4] "AVESTRUZ"                "BECERROS"                "BOVINOS EN PIE"         
+#[7] "BOVINOS EN PIE DE CRIA"  "CAPRINOS EN PIE"         "DESTETES BOVINO"        
+#[10] "DESTETES PORCINO"        "EQUINOS EN PIE"          "NOVILLOS"               
+#[13] "OTROS"                   "OTROS EN PIE"            "OVINOS EN PIE"          
+#[16] "PAVOS EN PIE"            "POLLITOS"                "PORCINOS EN PIE"        
+#[19] "PORCINOS EN PIE DE CRIA" "VACAS"                   "VENADOS EN PIE"      
+
+names(table(tb_livestock$NOMPRODUCT))
+names(table(tb_livestock$TRANSLATION))
+barplot(table(tb_livestock$NOMPRODUCT),names.arg=names(table(tb_livestock$NOMPRODUCT)),las=2)
+
+#should calves be in?
+selected_livestock1 <- c("BOVINOS EN PIE","BOVINOS EN PIE DE CRIA","DESTETES BOVINO","BOVINOS EN PIE DE CRIA")
+
+additional_cat1 <- c("CAPRINOS EN PIE","PORCINOS EN PIE DE CRIA","PORCINOS EN PIE","DESTETES PORCINO")
+additional_cat2 <- c("vacas")
+
+selected_livestock <- c(selected_livestock1,additional_cat1,additional_cat1)
+
+tb_to_convert <- subset(tb_livestock ,tb_livestock$NOMPRODUCT %in% selected_livestock)
+
+table(tb_to_convert$NV_UMEDIDA) #OK all cabeza
+
+#Stocking rates from 0.5 1 AU (head) per ha. for Mexico, tropical areas are more extensive 0.3. If we use 1 head per ha we are being generous
+
+conversion_rate <- 1/c(0.3,0.5,1) #this corresponds to head per ha
+
+tb_to_convert$land_consumption1 <- tb_to_convert$NV_CANT*conversion_rate[1]
+tb_to_convert$land_consumption2 <- tb_to_convert$NV_CANT*conversion_rate[2]
+tb_to_convert$land_consumption3 <- tb_to_convert$NV_CANT*conversion_rate[3]
+
+tb_summarized <- aggregate(NV_CANT ~ year + product_cat , data = tb_to_convert, sum)
+tb_summarized$land_consumption1 <- tb_summarized$NV_CANT*conversion_rate[1]
+tb_summarized$land_consumption2 <- tb_summarized$NV_CANT*conversion_rate[2]
+tb_summarized$land_consumption3 <- tb_summarized$NV_CANT*conversion_rate[3]
+
+tb_summarized$percent_land_consumption1 <- (tb_summarized$land_consumption1/total_land_consumed_qr)*100 
+tb_summarized$percent_land_consumption2 <- (tb_summarized$land_consumption2/total_land_consumed_qr)*100 
+tb_summarized$percent_land_consumption3 <- (tb_summarized$land_consumption3/total_land_consumed_qr)*100 
+
+write.table()
+plot(tb_summarized$percent_land_consumption1 ~year,data=tb_summarized,type="b")
+plot(tb_summarized$percent_land_consumption2 ~year,data=tb_summarized,type="b")
+plot(tb_summarized$percent_land_consumption3 ~year,data=tb_summarized,type="b")
+
+#View(tb_summarized)
+
+total_land_consumed1 <- sum(tb_to_convert$land_consumption1) #this is in ha
+total_land_consumed2 <- sum(tb_to_convert$land_consumption2) #this is in ha
+total_land_consumed3 <- sum(tb_to_convert$land_consumption3) #this is in ha
+
+
+
 
 ratio_used <- c(
 total_land_consumed1/total_land_consumed_qr,
