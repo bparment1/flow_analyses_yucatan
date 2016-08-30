@@ -5,9 +5,10 @@
 #
 #AUTHOR: Benoit Parmentier                                                                       
 #DATE CREATED:07/11/2016 
-#DATE MODIFIED: 08/28/2016
+#DATE MODIFIED: 08/30/2016
 #
 #PROJECT: Flow, land cover change with Marco Millones
+#COMMIT: Adding land conversion area
 #
 ##################################################################################################
 #
@@ -536,7 +537,7 @@ xyplot(NV_CANT ~ year | consumption,subset(test3,test3$product_cat=="agri"),type
 #test <- aggregate(NV_CANT ~ product_cat + year + flow_direction + extraction + consumption, 
 #                  data = subset(tb,tb$, sum)
 
-test <- aggregate(NV_CANT ~ product_cat + year + flow_direction + extraction + consumption, 
+test_all <- aggregate(NV_CANT ~ product_cat + year + flow_direction + extraction + consumption, 
                                     data = tb, sum)
                   
 ################## Analysis for number of truck
@@ -618,72 +619,85 @@ mean_y <-tapply(tb_tmp$y,tb_tmp$flow_dist_cat, mean, na.rm=TRUE)
 sum_y <-tapply(tb_tmp$y,tb_tmp$flow_dist_cat, sum, na.rm=TRUE)
 barplot(sum_y,main="meat",names.arg=c("QR","GYR","MEX","MEX"))
 
-#plot(table(tmp[[3]]),type="h")
-#plot(table(tmp[[2]]),type="h")
-#plot(table(tmp[[1]]),type="h")
+##########################
+#### PART 4: CONVERSION OF FLOWS INTO LAND AREA
 
-# ANOVA/MANOVA comparing
-# 
-# Interaction between hinterland scales
-# 
-#Regression 1: a vs b+c
-#Regression 2: a vs d+e
-#Regression 3: a vs f+g
-#Regression 4: b+c vs d+e
-#Regression 5: b+c vs f+g
-#Regression 6: d+e vs f+g
+### Step 1: conversion of flow to land use
 
+#1. isolate  'bovino' from the aggregate livestock category, but you can try including 'caprino' and 'porcino' and 'ovino' as well
+#select all that contain 'bovino' or 'caprino' or 'porcino' AND 'cabezas'
 
-##Regression 1: a vs b+c
+#Stocking rates fo from 0.5 1 AU (head) per ha. for Mexico, tropical areas are more extensive 0.3. If we use 1 head per ha we are being generous
 
-#"QR_QR"  = "a", # internal consuption: C
-#"QR_GYR" = "b", # QR->GYR outflow: B
-#"GYR_QR" = "c", # inflow: A 
+tb_livestock <- subset(tb,tb$product_cat=="livestock" & tb$consumption==1)
+dim(tb_livestock)
+table(tb_livestock$NOMPRODUCT)
+names(table(tb_livestock$NOMPRODUCT))
+names(table(tb_livestock$TRANSLATION))
+barplot(table(tb_livestock$NOMPRODUCT),names.arg=names(table(tb_livestock$NOMPRODUCT)),las=2)
 
-#tb$flow_types
+#should calves be in?
+selected_livestock <- c("BOVINOS EN PIE","BOVINOS EN PIE DE CRIA","DESTETES BOVINO","BOVINOS EN PIE DE CRIA")
 
-## first subset the data for specific product and categories!!!
+additional_cat1 <- c("CAPRINOS EN PIE","PORCINOS EN PIE DE CRIA","PORCINOS EN PIE","DESTETES PORCINO")
+additional_cat2 <- c("vacas")
 
-#tb$y <- tb$IDMOVILIZA #rethink this in terms of counts from municipios?
-#tb$y <- 1
+tb_to_convert <- subset(tb_livestock ,tb_livestock$NOMPRODUCT %in% selected_livestock)
 
+table(tb_to_convert$NV_UMEDIDA) #OK all cabeza
 
+conversion_rate <- c(0.3,0.5,1)
 
-### This is a quick ANOVA style regression (General Linear Model)
-#mod <- lm(y ~ flow_types, data= test)
-#summary(mod)
+tb_to_convert$land_consumption1 <- tb_to_convert$NV_CANT*conversion_rate[1]
+tb_to_convert$land_consumption2 <- tb_to_convert$NV_CANT*conversion_rate[2]
+tb_to_convert$land_consumption3 <- tb_to_convert$NV_CANT*conversion_rate[3]
 
-#summary(mod)
-#
-#Call:
-#  lm(formula = y ~ flow_types, data = test)
-#
-#Residuals:
-#  Min     1Q Median     3Q    Max 
-#-155    -23     -3     -3 276325 
-#
-#Coefficients:
-#  Estimate Std. Error t value Pr(>|t|)    
-#(Intercept)    28.28      16.45   1.720   0.0855 .  
-#flow_typesb   126.71      24.34   5.206 1.93e-07 ***
-#  flow_typesc   -21.93      18.21  -1.204   0.2285    
-#---
-#  Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
-#
-#Residual standard error: 1955 on 88648 degrees of freedom
-#(1 observation deleted due to missingness)
-#Multiple R-squared:  0.0006506,	Adjusted R-squared:  0.0006281 
-#F-statistic: 28.86 on 2 and 88648 DF,  p-value: 2.966e-13
+total_land_consumed1 <- sum(tb_to_convert$land_consumption1) #this is in ha
+total_land_consumed2 <- sum(tb_to_convert$land_consumption2) #this is in ha
+total_land_consumed3 <- sum(tb_to_convert$land_consumption3) #this is in ha
 
-#coef(mod)
-#str(mod)
-#plot(mod)
+### Step 2: conversion of flow to land use
 
-#plot(coef(mod),type="h")
-#plot(coef(mod),type="b",ylab="quant",main="Agriculture")
+#Use the CI land cover map in the Fire analysis script. There are 3 maps
+#1990, 2000 and 2007
+#it is possible that you have the change map only
 
-## We need to extract the standard error and coef values for the slope of each type!!
-## Plot the coef val and CI for each categories
+#FP NFP CH  use NFP + CH
+
+#http://www.fao.org/ag/agp/agpc/doc/counprof/mexico/Mexico.htm
+#http://www.fao.org/docrep/010/a0701e/a0701e00.HTM
+
+in_dir_CI_data <- "/home/bparmentier/Google Drive/FireYuca_2016/"
+data_CI_fname <- "/home/bparmentier/Google Drive/FireYuca_2016/datasets/Firedata_05182016.txt" #contains the whole dataset
+state_fname <- "/home/bparmentier/Google Drive/FireYuca_2016/IN_QGIS/State_dis_from_muni.shp"
+state_fname <- "/home/bparmentier/Google Drive/FireYuca_2016/IN_QGIS/State_dis_from_muni.shp"
+
+#data_CI_fname <- "/home/bparmentier/Google Drive/FireYuca_2016/old_data/000_GYR_FIRENDVI_2000-9.txt"
+#data_CI_02062016.txt
+coord_names <- c("POINT_X","POINT_Y") #PARAM 11
+zonal_var_name <- "state" #name of the variable to use to run the model by zone, Yucatan state here
+y_var_name <- "fpnfpch"
+id_name <- "yucatan_fire_pointid" #Column with the reference point id
+
+data_df <-read.table(data_CI_fname,stringsAsFactors=F,header=T,sep=",")
+#data_Hansen <-read.table(data_CI_fname,stringsAsFactors=F,header=T,sep=",")
+
+#Create the count variable
+fire_modis_col <- c("FIRE_2000","FIRE_2001","FIRE_2002","FIRE_2003","FIRE_2004","FIRE_2005","FIRE_2006","FIRE_2007")
+data_df$FIRE_freq <- data_df$FIRE_2000 + data_df$FIRE_2001 + data_df$FIRE_2002 + data_df$FIRE_2003 + data_df$FIRE_2004 + data_df$FIRE_2005 + data_df$FIRE_2006 + data_df$FIRE_2007 
+data_df$FIRE_intensity <- data_df$FIRE_freq/8
+data_df$FIRE_bool <- data_df$FIRE_freq > 0
+data_df$FIRE_bool <- as.numeric(data_df$FIRE_bool)
+
+data_df_spdf <- data_df
+coordinates(data_df_spdf) <- coord_names
+filename<-sub(extension(basename(state_fname)),"",basename(state_fname))       #Removing path and the extension from file name.
+state_outline <- readOGR(dsn=dirname(state_fname), filename)
+
+proj4string(data_df_spdf) <- proj4string(state_outline)
+l_poly <- over(data_df_spdf,state_outline) #points in polygon operation
+l_poly[[id_name]] <- data_df_spdf[[id_name]]
+data_df_spdf<- merge(data_df_spdf,l_poly,by=id_name)
 
 #################################  END OF FILE ###########################################
 
