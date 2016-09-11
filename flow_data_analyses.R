@@ -5,10 +5,10 @@
 #
 #AUTHOR: Benoit Parmentier                                                                       
 #DATE CREATED:07/11/2016 
-#DATE MODIFIED: 08/30/2016
+#DATE MODIFIED: 09/11/2016
 #
 #PROJECT: Flow, land cover change with Marco Millones
-#COMMIT: reading land data and comparing available land to land consumed
+#COMMIT: novel screening and reorganization of outputs to generate inputs for new tables and outputs
 #
 ##################################################################################################
 #
@@ -34,6 +34,7 @@ library(xts)                               # Time series object and functions
 library(remote)                            # EOT implementation in R/cpp
 library(XML)                               # HTML funcitons
 library(plyr)
+library(reshape2)
 
 #################################################
 ###### Functions  used in the script  ##########
@@ -74,7 +75,7 @@ CRS_reg <- CRS_WGS84 # PARAM 3
 file_format <- ".txt" #PARAM 4
 NA_value <- -9999 #PARAM5
 NA_flag_val <- NA_value #PARAM6
-out_suffix <-"flow_08302016" #output suffix for the files and ouptu folder #PARAM 7
+out_suffix <-"flow_09112016" #output suffix for the files and ouptu folder #PARAM 7
 create_out_dir_param=TRUE #PARAM8
 num_cores <- 4 #PARAM 9
 
@@ -185,7 +186,6 @@ barplot(x)
 #f) QR->W
 #g) QR-<W
 
-
 ### Do a quick crosstab
 xtb <- table(tb$X1.9_ORIG_CVE_HINT,tb$X1.9_DEST_CVE_HINT)
 print(xtb)
@@ -212,7 +212,7 @@ table(tb$ORIG_DEST_HINT)
 
 ## Reclass 7 options out of 16, this is centering on options from QR point of view only!!!
 
-#QR_QR <- a #internal consuption: C
+#QR_QR <- a #internal flow consumption: C
 #QR_GYR <- b #QR->GYR outflow: B
 #GYR_QR <- c # inflow: A 
 #QR_MEX <- d #d) QR->MX: B (outflow)
@@ -222,7 +222,7 @@ table(tb$ORIG_DEST_HINT)
 
 ##Using revalue from plyr package!
 tb$flow_types <- revalue(tb$ORIG_DEST_HINT,
-                         c("QR_QR"  = "a", # internal consuption: C
+                         c("QR_QR"  = "a", # internal flows consumption: C
                            "QR_GYR" = "b", # QR->GYR outflow: B
                            "GYR_QR" = "c", # inflow: A 
                            "QR_MEX" = "d", # d) QR->MX: B (outflow)
@@ -245,7 +245,6 @@ tb$flow_direction <- revalue(tb$ORIG_DEST_HINT,
 
 #test <- tb[tb$flow_direction=="GYR_GYR",]
 
-
 ## Extraction is B+C (defined as comsumption of from land produced locally)
 #this is internal production which is exported (B) or consumed locally (C)
 tb$extraction[tb$flow_direction=="B" | tb$flow_direction=="C"] <- 1 
@@ -257,6 +256,10 @@ table(tb$extraction)
 tb$consumption[tb$flow_direction=="A" | tb$flow_direction=="C"] <- 1 
 tb$consumption[tb$flow_direction=="B"] <- 0
 table(tb$consumption)
+
+#Generate later:
+#A+B+C: Total impact of food production and consumption on land in anchor region in a business as usual scenario
+#B-A: trade balance in terms of land 
 
 ### Consider only flows within  Quintano Roo
 
@@ -282,21 +285,10 @@ tb$flow_dist_cat <- revalue(tb$flow_types,
 ### PART 1: SCREEN DATA VALUES FOR INCONSISTENCIES AND TO SELECT BASE PRODUCTS
 
 
-######################################
+##################
 ### We need to subset by product
 
-#test <-subset(tb,tb$NOMPRODUCT=="BOVINOS/CARNE")
-#test <- subset(tb,tb$SECCION=="AGRICOLA")
-#test <- subset(test,test$flow_types%in% c("a","b","c"))
-#test$y <- as.numeric(test$NV_CANT)
-
-#NV_CANT
-#tb$NOMPRODUCT
-#tb$SECCION
-#tb$NV_UMEDIDA
-
 ### Screening:
-
 #exclude this values
 #tb$CODPROD=86 (huevos), 95 (cormenas), 96 (miel), 97 (cerra=wax), 183 (pasterized eggs), 200 (quail eggs)
 
@@ -321,9 +313,7 @@ table(tb$product_cat)
 #if seccion= pecuario and nv_medida= tonelada then meat
 #if seccion= pecuario and nv_medida = cabeza then livestock 
 
-## 
-
-#First make sure we have numeric values
+###First make sure we have numeric values
 
 tb$NV_CANT <- as.numeric(tb$NV_CANT)
   
@@ -335,21 +325,6 @@ pos_col <- which(names(tb)=="y")
 tb_ordered <- tb[ order(-tb[,pos_col]), ]
 
 tb_ordered[1:100,c("NV_CANT","product_cat","flow_direction","TRANSLATION")]
-tb_ordered[101:200,c("NV_CANT","product_cat","flow_direction","TRANSLATION")]
-tb_ordered[201:300,c("NV_CANT","product_cat","flow_direction","TRANSLATION")]
-tb_ordered[301:400,c("NV_CANT","product_cat","flow_direction","TRANSLATION")]
-tb_ordered[401:500,c("NV_CANT","product_cat","flow_direction","TRANSLATION")]
-tb_ordered[501:600,c("NV_CANT","product_cat","flow_direction","TRANSLATION")]
-tb_ordered[601:700,c("NV_CANT","product_cat","flow_direction","TRANSLATION")]
-tb_ordered[701:800,c("NV_CANT","product_cat","flow_direction","TRANSLATION")]
-tb_ordered[801:900,c("NV_CANT","product_cat","flow_direction","TRANSLATION")]
-
-
-table(tb_ordered[1:100,]$TRANSLATION)
-table(tb_ordered[1:1000,]$TRANSLATION)
- 
-table(tb_ordered[1:2000,]$TRANSLATION)    
-  
 table(tb_ordered[1:10000,]$TRANSLATION)  
 
 tb_ordered_agri <- subset(tb_ordered,tb$product_cat=="agri")
@@ -361,30 +336,31 @@ tb_ordered_agri <- subset(tb_ordered,tb_ordered$product_cat=="agri")
 dim(tb_ordered_agri)
 tb_ordered_agri[1:30,c("NV_CANT","product_cat","flow_direction","TRANSLATION")]
 
-barplot(table(tb_ordered_meat$TRANSLATION))
+#barplot(table(tb_ordered_meat$TRANSLATION))
 
 ### Check for meat only
 
 tb_ordered_meat <- subset(tb_ordered,tb_ordered$product_cat=="meat")
 dim(tb_ordered_meat)
 tb_ordered_meat[1:40,c("NV_CANT","product_cat","flow_direction","FECHA","TRANSLATION")]
-tb_ordered_meat[1:40,c("NV_CANT","product_cat","flow_direction","FECHA","TRANSLATION")]
 
-View(tb_ordered_meat)
+#View(tb_ordered_meat)
 #remove potential error
 val <- max(tb_ordered_meat$NV_CANT) #17000,GALLINAZA CHICKEN EXCREMENT FERTILIZER FROM MEAT CHICKENS
 row_to_remove <- which(tb$NV_CANT==val & tb$product_cat=="meat") 
 
 tb  <- tb[-row_to_remove,]
 
-
-#table(tb_ordered_meat$TRANSLATION)
-
-#test_tb <- tb[tb$SECCION=="AGRICOLA" & tb$NV_UMEDIDA=="TONELADA"] 
-#subset(tb,tb$)
-#& (tb$NV_CANT < 1000) ]
-
+##### Additional screening: removing duplicates row (transactions)
 #View(tb[tb$dates==tb_agri_by_dates[max_pos,]$dates,])
+length(unique(tb$IDMOVILIZA))## 11 duplication
+#remove the duplication!!!
+screening_transaction <- as.data.frame(table(tb$IDMOVILIZA))
+duplicate_transaction <- subset(screening_transaction,Freq >1)
+duplicate_transcation_df <- subset(tb,tb$IDMOVILIZA %in% as.character(duplicate_transaction$Var1))
+#This is a small number but has no effect on total. It is removed to make sure that we are doing good.
+codes_to_remove <- as.character(duplicate_transaction$Var1)
+tb <- subset(tb,!tb$IDMOVILIZA %in% codes_to_remove)
 
 #filename_flow 
 out_filename <- file.path(outDir,paste("tb_overall_flow_data_clean_",out_suffix,".txt",sep=""))
@@ -441,120 +417,87 @@ plot(NV_CANT ~ dates,ylim=c(0,1000),xlim=c(1,400),type="l",
 #var_x_dz <- zoo(var_x,l_dates)
 
 range(tb_tmp_dz$NV_CANT)
-range(tb_tmp$NV_CANT,na.rm=T)
+#range(tb_tmp$NV_CANT,na.rm=T)
 
-plot(tb_tmp_dz$NV_CANT)
-plot(tb_tmp$NV_CANT)
-
+plot(tb_tmp_dz$NV_CANT) #problem
+#plot(tb_tmp$NV_CANT)
 
 ###########################################
-### PART 2: AGGREGATE  FLOWS BY TYPES AND DATES/YEARS
+### PART 2: SUMMARY TABLES: AGGREGATE  FLOWS BY TYPES AND DATES/YEARS
 ####################################
 
 ### Aggregate by year and product_cat
 
 #2001 to 2009
 
-test <- aggregate(NV_CANT ~ product_cat + year + flow_direction + extraction + consumption, data = tb, sum)
+tb_summary1 <- aggregate(NV_CANT ~ product_cat + year + flow_direction + extraction + consumption, data = tb, sum)
 
 #   "C", # internal consuption: C
 #   = "B", # QR->GYR outflow: B
 #  "A", # inflow: A 
 
-test$comp <- test$consumption*2 + test$extraction*1
+tb_summary1$comp <- tb_summary1$consumption*2 + tb_summary1$extraction*1
 
 ## Extraction is B+C (defined as comsumption of from land produced locally)
-  
-### Make a loop later, this is to explore the data
-direction_val <- "A" #Inflow
-plot(NV_CANT~year,subset(test,test$product_cat=="livestock" & test$flow_direction==direction_val),type="b",main=paste("livestock",direction_val,sep=" "))
-plot(NV_CANT~year,subset(test,test$product_cat=="meat" & test$flow_direction==direction_val),type="b",main=paste("meat",direction_val,sep=" "))
-plot(NV_CANT~year,subset(test,test$product_cat=="agri" & test$flow_direction==direction_val),type="b",main=paste("agri",direction_val,sep=" "))
 
-direction_val <- "B" #Outflow
-plot(NV_CANT~year,subset(test,test$product_cat=="livestock" & test$flow_direction==direction_val),type="b",main=paste("livestock",direction_val,sep=" "))
-plot(NV_CANT~year,subset(test,test$product_cat=="meat" & test$flow_direction==direction_val),type="b",main=paste("meat",direction_val,sep=" "))
-plot(NV_CANT~year,subset(test,test$product_cat=="agri" & test$flow_direction==direction_val),type="b",main=paste("agri",direction_val,sep=" "))
+## Look into extraction/production and consumption
 
-direction_val <- "C" #Internal flow (internal consumption)
-plot(NV_CANT~year,subset(test,test$product_cat=="livestock" & test$flow_direction==direction_val),type="b",main=paste("livestock",direction_val,sep=" "))
-plot(NV_CANT~year,subset(test,test$product_cat=="meat" & test$flow_direction==direction_val),type="b",main=paste("meat",direction_val,sep=" "))
-plot(NV_CANT~year,subset(test,test$product_cat=="agri" & test$flow_direction==direction_val),type="b",main=paste("agri",direction_val,sep=" "))
+tb_summary2 <- aggregate(NV_CANT ~ product_cat + year + extraction, data = tb_summary1, sum)
+tb_summary3 <- aggregate(NV_CANT ~ product_cat + year + consumption, data = tb_summary1, sum)
 
-### Need to improve this code later on!!!
-xyplot(NV_CANT ~ year | flow_direction,subset(test,test$product_cat=="livestock"),type="b",
-       main="livestock")
-xyplot(NV_CANT ~ year | flow_direction,subset(test,test$product_cat=="meat"),type="b",
-       main="meat")
-xyplot(NV_CANT ~ year | flow_direction,subset(test,test$product_cat=="agri"),type="b",
-       main="agri")
+### For use in generating table 4 and table 5
 
+tb$transaction_bool <- 1 
+tb_summary4 <- aggregate(transaction_bool ~ product_cat + ORIG_DEST_HINT + flow_direction , data = tb, sum)
+
+### Reorganizing data table: to get A+B+C and A+C by year
+
+tb_summary5 <- dcast(tb_summary1, NV_CANT + product_cat + year ~ flow_direction)
+
+### Write out tables genated here:
 
 #### Writing the table
-write.table(test,file=paste("test_aggregated_data_by_flow_by_product_year_",out_suffix,".txt",sep=""),sep=",")
-
-## Look into extraction
-
-#xyplot(NV_CANT ~ year | extraction,test2)
-
-test2 <- aggregate(NV_CANT ~ product_cat + year + extraction, data = test, sum)
-test3 <- aggregate(NV_CANT ~ product_cat + year + consumption, data = test, sum)
-
-extraction_val <- 1 #B+C
-#plot(NV_CANT~year,subset(test2,test2$extraction=="livestock" & test$flow_direction==direction_val),type="b",main=paste("livestock",direction_val,sep=" "))
-#plot(NV_CANT~year,subset(test,test$product_cat=="meat" & test$flow_direction==direction_val),type="b",main=paste("meat",direction_val,sep=" "))
-direction_val <- "0" #A, inlfow
-plot(NV_CANT~year,subset(test2,test2$product_cat=="livestock" & test2$extraction==direction_val),type="b",col="blue",main=paste("livestock",direction_val,sep=" "))
-direction_val <- "1" #Internal flow + outflow (internal extraction)
-lines(NV_CANT~year,subset(test2,test2$product_cat=="livestock" & test2$extraction==direction_val),type="b",col="red",main=paste("livestock",direction_val,sep=" "))
-plot(NV_CANT~year,subset(test2,test2$product_cat=="livestock" & test2$extraction==direction_val),type="b",col="red",main=paste("livestock",direction_val,sep=" "))
+write.table(tb_summary1,file=paste("tb_summary1_aggregated_data_by_flow_by_product_year_",out_suffix,".txt",sep=""),sep=",")
 
 #### Writing the table
-write.table(test2,file=paste("test2_aggregated_data_by_exraction_by_product_year_",out_suffix,".txt",sep=""),sep=",")
+write.table(tb_summary2,file=paste("tb_summary2_aggregated_data_by_production_by_product_year_",out_suffix,".txt",sep=""),sep=",")
 
 #### Writing the table
-write.table(test3,file=paste("test3_aggregated_data_by_comsumption_by_product_year_",out_suffix,".txt",sep=""),sep=",")
+write.table(tb_summary3,file=paste("tb_summary3_aggregated_data_by_comsumption_by_product_year_",out_suffix,".txt",sep=""),sep=",")
 
+#### Writing the table
+write.table(tb_summary4,file=paste("tb_summary4_aggregated_data_by_origin_dest_by_product_",out_suffix,".txt",sep=""),sep=",")
+
+#### Writing the table
+write.table(tb_summary5,file=paste("tb_summary5_aggregated_data_by_quantity_by_A_B_C_by_product_year",out_suffix,".txt",sep=""),sep=",")
 
 ####################################################
 ##### PLOTTING EXTRACTION FOR EACH PRODUCT #####
 
-xyplot(NV_CANT ~ year | extraction,subset(test2,test2$product_cat=="livestock"),type="b",
+xyplot(NV_CANT ~ year | extraction,subset(tb_summary2,tb_summary2$product_cat=="livestock"),type="b",
        main="livestock")
 
-xyplot(NV_CANT ~ year | extraction,subset(test2,test2$product_cat=="meat"),type="b",
+xyplot(NV_CANT ~ year | extraction,subset(tb_summary2,tb_summary2$product_cat=="meat"),type="b",
        main="meat")
 
-xyplot(NV_CANT ~ year | extraction,subset(test2,test2$product_cat=="agri"),type="b",
+xyplot(NV_CANT ~ year | extraction,subset(tb_summary2,tb_summary2$product_cat=="agri"),type="b",
        main="agri")
-
-#range_val <- range(subset(test2,test2$product_cat=="livestock")$NV_CANT)
-#plot(NV_CANT ~ year, col="blue",type="b",ylim=range_val,
-#     data=subset(test2,test2$product_cat=="livestock" & test2$extraction==1) )
-
-#lines(NV_CANT ~ year, col="red",type="b",
-#      data=subset(test2,test2$product_cat=="livestock" & test2$extraction==0) )
-
 
 ####################################################
 ##### PLOTTING CONSUMPTION FOR EACH PRODUCT #####
 
-xyplot(NV_CANT ~ year | consumption,subset(test3,test3$product_cat=="livestock"),type="b",
+xyplot(NV_CANT ~ year | consumption,subset(tb_summary3,tb_summary3$product_cat=="livestock"),type="b",
        main="livestock")
 
-xyplot(NV_CANT ~ year | consumption,subset(test3,test3$product_cat=="meat"),type="b",
+xyplot(NV_CANT ~ year | consumption,subset(tb_summary3,tb_summary3$product_cat=="meat"),type="b",
        main="meat")
 
-xyplot(NV_CANT ~ year | consumption,subset(test3,test3$product_cat=="agri"),type="b",
+xyplot(NV_CANT ~ year | consumption,subset(tb_summary3,tb_summary3$product_cat=="agri"),type="b",
        main="agri")
-
 
 ### Apply the area factor for land
 
 ### Get an idea of export by year and hinterland category:
-
-#test <- aggregate(NV_CANT ~ product_cat + year + flow_direction + extraction + consumption, 
-#                  data = subset(tb,tb$, sum)
 
 test_all <- aggregate(NV_CANT ~ product_cat + year + flow_direction + extraction + consumption, 
                                     data = tb, sum)
@@ -764,10 +707,10 @@ tb_summarized$percent_land_consumption1 <- (tb_summarized$land_consumption1/tota
 tb_summarized$percent_land_consumption2 <- (tb_summarized$land_consumption2/total_land_consumed_qr)*100 
 tb_summarized$percent_land_consumption3 <- (tb_summarized$land_consumption3/total_land_consumed_qr)*100 
 
-write.table()
-plot(tb_summarized$percent_land_consumption1 ~year,data=tb_summarized,type="b")
-plot(tb_summarized$percent_land_consumption2 ~year,data=tb_summarized,type="b")
-plot(tb_summarized$percent_land_consumption3 ~year,data=tb_summarized,type="b")
+#write.table()
+plot(tb_summarized$percent_land_consumption1 ~year,data=tb_summarized,type="b",main=paste0("cow ",conversion_rate[1]))
+plot(tb_summarized$percent_land_consumption2 ~year,data=tb_summarized,type="b",main=paste0("cow ",conversion_rate[2]))
+plot(tb_summarized$percent_land_consumption3 ~year,data=tb_summarized,type="b",main=paste0("cow ",conversion_rate[3]))
 
 #View(tb_summarized)
 
@@ -775,16 +718,12 @@ total_land_consumed1 <- sum(tb_to_convert$land_consumption1) #this is in ha
 total_land_consumed2 <- sum(tb_to_convert$land_consumption2) #this is in ha
 total_land_consumed3 <- sum(tb_to_convert$land_consumption3) #this is in ha
 
-
-
-
 ratio_used <- c(
 total_land_consumed1/total_land_consumed_qr,
 total_land_consumed2/total_land_consumed_qr,
 total_land_consumed3/total_land_consumed_qr)
 
 df_land_consumed1 <- data.frame(ratio_used,conversion_rate)
-
 
 length(unique(tb$IDMOVILIZA))
 #dim(tb)
@@ -823,35 +762,5 @@ df_land_consumed2 <- data.frame(ratio_used,conversion_rate)
 
 df_land_consumed <- rbind(df_land_consumed1,df_land_consumed2)
 
+
 #################################  END OF FILE ###########################################
-
-
-# ANOVA/MANOVA comparing
-# 
-# Interaction between hinterland scales
-# 
-# a vs b+c
-# a vs d+e
-# a vs f+g
-# 
-# b+c vs d+e
-# b+c vs f+g
-# 
-# d+e vs f+g
-# 
-# Same but taking direction in mind
-# 
-# outflows only
-# 
-# b vs d vs f
-# 
-# inflows only
-# 
-# c, vs e vs g
-# 
-# all comparisons done in three types
-# 
-# movilizacion (=transactions, unitless, counts, we can put it in %)
-# meat (kg)
-# livestock (heads)
-# agrucultural producs (tones)
