@@ -5,10 +5,10 @@
 #
 #AUTHOR: Benoit Parmentier                                                                       
 #DATE CREATED:08/30/2016 
-#DATE MODIFIED: 09/11/2016
+#DATE MODIFIED: 09/15/2016
 #
 #PROJECT: Flow and land cover change in QR and GYR with Marco Millones
-#COMMIT: reorganization and modifications of figures and tables 
+#COMMIT: generating table 5 and more corrections
 #
 ##################################################################################################
 
@@ -196,8 +196,9 @@ hinterland_tb  <- read.table(file.path(inDir,hinterland_year_by_product_sum_file
 #################################
 ############## Part 0: Generate table ################
 
+##########
+### Generate table 4
 #Table 4. Total count  of flow transaction by type all years aggregated. Include flows by type AG, LIVE, MEAT, by trans units and % total of each type
-#Table 5. Flow quantities by type all years aggregated. Include flows by type AG, LIVE, MEAT, by NVQUANT units and % total of each type
 
 rows_to_remove <- c("QR_W","W_QR")
 #length(unique(tb_summary4$ORIG_DEST_HINT)) #from 7 drop 5 of them
@@ -217,6 +218,33 @@ names(df_table4) <- c("Flow","Direction","agri","livestock","meat")
 
 table4_filename <- file.path(inDir,paste0("df_table4_",out_suffix,".txt"))
 write.table(df_table4,file=table4_filename,sep=",")
+
+##########
+### Generate table 5
+#Table 5. Flow quantities by type all years aggregated. Include flows by type AG, LIVE, MEAT, by NVQUANT units and % total of each type
+
+##Make this a function...
+
+rows_to_remove <- c("QR_W","W_QR")
+#length(unique(tb_summary4$ORIG_DEST_HINT)) #from 7 drop 5 of them
+table5_tmp <- subset(tb_summary5, !ORIG_DEST_HINT %in% rows_to_remove) 
+
+table5_agri <- subset(table5_tmp,product_cat=="agri")
+table5_livestock <- subset(table5_tmp,product_cat=="livestock")
+table5_meat <- subset(table5_tmp,product_cat=="meat")
+
+col_agri <- format_column_for_table(table5_agri$NV_CANT,"agri")
+col_livestock <- format_column_for_table(table5_livestock$NV_CANT,"livestock")
+col_meat <- format_column_for_table(table5_meat$NV_CANT,"meat")
+
+df_table5 <- cbind(c(as.character(table5_agri$flow_direction),"TOTAL"),c(as.character(table5_agri$ORIG_DEST_HINT)," "),
+                   col_agri,col_livestock,col_meat)
+names(df_table5) <- c("Flow","Direction","agri","livestock","meat")
+
+table5_filename <- file.path(inDir,paste0("df_table5_",out_suffix,".txt"))
+write.table(df_table5,file=table5_filename,sep=",")
+
+##
 
 #################################
 ############## Part 1: Figure generation ################
