@@ -5,10 +5,10 @@
 #
 #AUTHOR: Benoit Parmentier                                                                       
 #DATE CREATED:07/11/2016 
-#DATE MODIFIED: 09/11/2016
+#DATE MODIFIED: 09/15/2016
 #
 #PROJECT: Flow, land cover change with Marco Millones
-#COMMIT: novel screening and reorganization of outputs to generate inputs for new tables and outputs
+#COMMIT: additional screening and correction to table 5
 #
 ##################################################################################################
 #
@@ -362,6 +362,13 @@ duplicate_transcation_df <- subset(tb,tb$IDMOVILIZA %in% as.character(duplicate_
 codes_to_remove <- as.character(duplicate_transaction$Var1)
 tb <- subset(tb,!tb$IDMOVILIZA %in% codes_to_remove)
 
+### screening non-food related zacate
+#unique(tb$NOMPRODUCT)
+
+#<- sum(tb$NOMPRODUCT == "ZACATE")
+codes_to_remove <- c("ZACATE")
+tb <- subset(tb,!tb$NOMPRODUCT %in% codes_to_remove)
+
 #filename_flow 
 out_filename <- file.path(outDir,paste("tb_overall_flow_data_clean_",out_suffix,".txt",sep=""))
 write.table(tb,file=out_filename,sep=",")
@@ -391,7 +398,7 @@ length((tb_agri_by_dates$NV_CANT))
 tb_tmp_dz <- zoo(tb_agri_by_dates,as.Date(tb_agri_by_dates$dates)) #create zoo object from data.frame and date sequence object
 class(tb_tmp_dz$NV_CANT)
 
-plot(tb_tmp_dz$NV_CANT)
+#plot(tb_tmp_dz$NV_CANT)
 range(tb_tmp_dz$NV_CANT)
 range(tb_agri_by_dates$NV_CANT)
 
@@ -419,7 +426,7 @@ plot(NV_CANT ~ dates,ylim=c(0,1000),xlim=c(1,400),type="l",
 range(tb_tmp_dz$NV_CANT)
 #range(tb_tmp$NV_CANT,na.rm=T)
 
-plot(tb_tmp_dz$NV_CANT) #problem
+#plot(tb_tmp_dz$NV_CANT) #problem
 #plot(tb_tmp$NV_CANT)
 
 ###########################################
@@ -451,8 +458,11 @@ tb$transaction_bool <- 1
 tb_summary4 <- aggregate(transaction_bool ~ product_cat + ORIG_DEST_HINT + flow_direction , data = tb, sum)
 
 ### Reorganizing data table: to get A+B+C and A+C by year
+# get the relevant data
 
-tb_summary5 <- dcast(tb_summary1, NV_CANT + product_cat + year ~ flow_direction)
+tb_summary5 <- aggregate(NV_CANT ~ product_cat + ORIG_DEST_HINT + flow_direction , data = tb, sum)
+
+#tb_summary5 <- dcast(tb_summary1, NV_CANT + product_cat + year ~ flow_direction)
 
 ### Write out tables genated here:
 
