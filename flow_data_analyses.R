@@ -682,81 +682,42 @@ additional_cat2 <- c("vacas")
 
 selected_livestock <- c(selected_livestock1,additional_cat1,additional_cat1)
 
-tb_to_convert <- subset(tb_livestock ,tb_livestock$NOMPRODUCT %in% selected_livestock)
+tb_to_convert <- subset(tb ,tb$NOMPRODUCT %in% selected_livestock)
 
 table(tb_to_convert$NV_UMEDIDA) #OK all cabeza
 
-#Stocking rates from 0.5 1 AU (head) per ha. for Mexico, tropical areas are more extensive 0.3. If we use 1 head per ha we are being generous
-
-conversion_rate <- 1/c(0.3,0.5,1) #this corresponds to head per ha
-
-tb_to_convert$land_consumption1 <- tb_to_convert$NV_CANT*conversion_rate[1]
-tb_to_convert$land_consumption2 <- tb_to_convert$NV_CANT*conversion_rate[2]
-tb_to_convert$land_consumption3 <- tb_to_convert$NV_CANT*conversion_rate[3]
-
-tb_summarized <- aggregate(NV_CANT ~ year + product_cat , data = tb_to_convert, sum)
-tb_summarized$land_consumption1 <- tb_summarized$NV_CANT*conversion_rate[1]
-tb_summarized$land_consumption2 <- tb_summarized$NV_CANT*conversion_rate[2]
-tb_summarized$land_consumption3 <- tb_summarized$NV_CANT*conversion_rate[3]
-
-tb_summarized$percent_land_consumption1 <- (tb_summarized$land_consumption1/total_land_consumed_qr)*100 
-tb_summarized$percent_land_consumption2 <- (tb_summarized$land_consumption2/total_land_consumed_qr)*100 
-tb_summarized$percent_land_consumption3 <- (tb_summarized$land_consumption3/total_land_consumed_qr)*100 
-
-#write.table()
-plot(tb_summarized$percent_land_consumption1 ~year,data=tb_summarized,type="b",main=paste0("cow ",conversion_rate[1]))
-plot(tb_summarized$percent_land_consumption2 ~year,data=tb_summarized,type="b",main=paste0("cow ",conversion_rate[2]))
-plot(tb_summarized$percent_land_consumption3 ~year,data=tb_summarized,type="b",main=paste0("cow ",conversion_rate[3]))
-
-#View(tb_summarized)
-
-total_land_consumed1 <- sum(tb_to_convert$land_consumption1) #this is in ha
-total_land_consumed2 <- sum(tb_to_convert$land_consumption2) #this is in ha
-total_land_consumed3 <- sum(tb_to_convert$land_consumption3) #this is in ha
-
-ratio_used <- c(
-total_land_consumed1/total_land_consumed_qr,
-total_land_consumed2/total_land_consumed_qr,
-total_land_consumed3/total_land_consumed_qr)
-
-df_land_consumed1 <- data.frame(ratio_used,conversion_rate)
-
-length(unique(tb$IDMOVILIZA))
-#dim(tb)
-
-##### More conservative scenario:
-
-#should calves be in?
-selected_livestock1 <- c("BOVINOS EN PIE","BOVINOS EN PIE DE CRIA","DESTETES BOVINO","BOVINOS EN PIE DE CRIA")
-
-additional_cat1 <- c("CAPRINOS EN PIE","PORCINOS EN PIE DE CRIA","PORCINOS EN PIE","DESTETES PORCINO")
-additional_cat2 <- c("vacas")
-
 #selected_livestock <- c(selected_livestock,additional_cat1,additional_cat1)
-selected_livestock <- c(selected_livestock1,additional_cat2)
-
-tb_to_convert <- subset(tb_livestock ,tb_livestock$NOMPRODUCT %in% selected_livestock)
+selected_livestock <- c(selected_livestock1,additional_cat2,additional_cat1)
 
 #Stocking rates from 0.5 1 AU (head) per ha. for Mexico, tropical areas are more extensive 0.3. If we use 1 head per ha we are being generous
+#conversion_rate <- 1/c(0.3,0.5,1) #this corresponds to head per ha
 
-conversion_rate <- 1/c(0.3,0.5,1) #this corresponds to head per ha
+tb_conversion_rate_livestock1 <- data.frame(conversion_rate= 1/0.3 , NOMPRODUCT=selected_livestock)
+tb_conversion_rate_livestock2 <- data.frame(conversion_rate= 1/0.5 , NOMPRODUCT=selected_livestock)
+tb_conversion_rate_livestock3 <- data.frame(conversion_rate= 1/1 , NOMPRODUCT=selected_livestock)
 
-tb_to_convert$land_consumption1 <- tb_to_convert$NV_CANT*conversion_rate[1]
-tb_to_convert$land_consumption2 <- tb_to_convert$NV_CANT*conversion_rate[2]
-tb_to_convert$land_consumption3 <- tb_to_convert$NV_CANT*conversion_rate[3]
 
-total_land_consumed1 <- sum(tb_to_convert$land_consumption1) #this is in ha
-total_land_consumed2 <- sum(tb_to_convert$land_consumption2) #this is in ha
-total_land_consumed3 <- sum(tb_to_convert$land_consumption3) #this is in ha
+#can use mclapply if needed
+list_converted_tb_products <- lapply(1:nrow(tb_conversion_rate_livestock1),FUN=apply_conversion_rate,
+                                     tb_conversion_rate=tb_conversion_rate_livestock1,
+                                     tb_products=tb_to_convert)
 
-ratio_used <- c(
-  total_land_consumed1/total_land_consumed_qr,
-  total_land_consumed2/total_land_consumed_qr,
-  total_land_consumed3/total_land_consumed_qr)
+sum(unlist(lapply(list_converted_tb_products,FUN=nrow)))
+dim(tb_to_convert)
+tb_land_livestock <- do.call(rbind,list_converted_tb_products)
+dim(tb_land_livestock)
 
-df_land_consumed2 <- data.frame(ratio_used,conversion_rate)
+tb_land_livestock$land_consumption
+tb_land_summarized <- aggregate(land_consumption ~ year + product_cat , data = tb_land_livestock , sum)
+tb_land_summarized$percent_land_consumption <- (tb_land_summarized$land_consumption/total_land_consumed_qr)*100
+options(scipen=999)
 
-df_land_consumed <- rbind(df_land_consumed1,df_land_consumed2)
+plot(tb_land_summarized$percent_land_consumption ~year,data=tb_summarized,type="b",
+     ylab="% of land in QR",
+     main="Cattle land consumption as percentage of land")
+
+#### Writing the table
+write.table(tb_land_summarized,file=paste("tb_land_summarized_","livestock","_by_product_year",out_suffix,".txt",sep=""),sep=",")
 
 ###################################################################
 #################### PART 6: CONVERSION FOR A SET OF AGRICULTURAL CROPS #############
@@ -836,7 +797,7 @@ p5 <- xyplot(percent_land_consumption ~ year | NOMPRODUCT,data=tb_summarized3,
              type="b",
              ylab="Head", 
              main="Livestock flow extraction total by year ")
-p5
+
 plot(tb_summarized$percent_land_consumption ~year,data=tb_summarized,type="b",
      ylab="% of land in QR",
      main="Crop land consumption as percentage of land")
@@ -850,7 +811,22 @@ plot(tb_summarized$percent_land_consumption1 ~year,data=tb_summarized,type="b",m
 
 
 ### Get data for A and B etc...?
+dim(tb_land_crops)
 
 
+#tb_summarized <- aggregate(land_consumption ~ year + product_cat , data = tb_land_crops , sum)
+tb_land_crops$percent_land_consumption <- (tb_land_crops$land_consumption/total_land_consumed_qr)*100
+
+#tb_summary6 <- aggregate(percent_land_consumption ~ NOMPRODUCT + ORIG_DEST_HINT + flow_direction , data = tb_land_crops, sum)
+#tb_summary7 <- aggregate(percent_land_consumption ~ product_cat + ORIG_DEST_HINT + flow_direction , data = tb_land_crops, sum)
+#tb_summary8 <- aggregate(percent_land_consumption ~ product_cat + ORIG_DEST_HINT + flow_direction + year , data = tb_land_crops, sum)
+
+tb_summary6 <- aggregate(percent_land_consumption ~ flow_direction + year, data = tb_land_crops, sum)
+wr
+p6 <- xyplot(percent_land_consumption ~ year | flow_direction ,data=tb_summary9,
+             type="b",
+             ylab="Head", 
+             main="Livestock flow extraction total by year ")
+p7
 
 #################################  END OF FILE ###########################################
