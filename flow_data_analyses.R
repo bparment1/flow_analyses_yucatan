@@ -58,9 +58,10 @@ load_obj <- function(f){
   env[[nm]]
 }
 
-#infile1_function <- file.path("/home/bparmentier/Google Drive/Papers_writing_MEOT/R_scripts/",
-#                              "PCA_EOT_comparison_data_update_function_07152016.R")
-#source(infile1_function)
+in_dir_script <- "/home/bparmentier/Google Drive/000_Flow_and_LUD_research/Quintana_Roo_Research/scripts"
+infile1_function <- file.path(in_dir_script,
+                             "flow_data_analyses_function_09162016.R")
+source(infile1_function)
 
 #############################################
 ######## Parameters and arguments  ########
@@ -526,6 +527,20 @@ write.table(hinterland_year_tb,file=paste("hinterland_year_tb_product_sum_",out_
 
 #####
 
+tb$transaction_bool <- 1 
+tb_summary4 <- aggregate(transaction_bool ~ product_cat + ORIG_DEST_HINT + flow_direction , data = tb, sum)
+tb_summary5
+
+### Reorganizing data table: to get A+B+C and A+C by year
+# get the relevant data
+
+tb_summary5 <- aggregate(NV_CANT ~ product_cat + ORIG_DEST_HINT + flow_direction , data = tb, sum)
+
+hinterland_tb_quant_trans <- subset(tb_summary4,!ORIG_DEST_HINT%in% c("W_QR","QR_W"))
+
+tb_tmp <- subset(hinterland_tb_quant_trans,product_cat=="agri")
+barplot(table(tb_tmp$flow_dist_cat),main="agri",names.arg=c("QR","GYR","MEX"))
+
 tb_tmp <- subset(tb,tb$product_cat=="agri")
 tb_tmp$y <- tb_tmp$NV_CANT
 
@@ -640,7 +655,7 @@ land_consumed_qr <- data_df_spdf_qr$land_consumed*1/0.01
 total_land_consumed_qr <- sum(land_consumed_qr) #This is the total land available over 2000-2009?
 
 ###################################################################
-#################### PART5: CONVERSION FOR CATTLE COW AND RELATED #############
+#################### PART5: CONVERSION FOR LIVESTOCK: CATTLE COW AND RELATED #############
 
 ###### NOW SELECT PRODUCT AND COMPARE TO AVAILABLE LAND
 ### Step 1: conversion of flow to land use
@@ -708,17 +723,36 @@ tb_land_livestock <- do.call(rbind,list_converted_tb_products)
 dim(tb_land_livestock)
 
 tb_land_livestock$land_consumption
+tb_land_livestock$percent_land_consumption <- (tb_land_livestock$land_consumption/total_land_consumed_qr)*100
+
 tb_land_summarized <- aggregate(land_consumption ~ year + product_cat , data = tb_land_livestock , sum)
 tb_land_summarized$percent_land_consumption <- (tb_land_summarized$land_consumption/total_land_consumed_qr)*100
 options(scipen=999)
 
-plot(tb_land_summarized$percent_land_consumption ~year,data=tb_summarized,type="b",
+plot(percent_land_consumption ~year,data=tb_land_summarized ,type="b",
      ylab="% of land in QR",
-     main="Cattle land consumption as percentage of land")
+     main="Livestock land consumption as percentage of land")
 
-#### Writing the table
-write.table(tb_land_summarized,file=paste("tb_land_summarized_","livestock","_by_product_year",out_suffix,".txt",sep=""),sep=",")
+tb_land_summarized2 <- aggregate(percent_land_consumption ~ flow_direction + year, data = tb_land_livestock, sum)
 
+p6 <- xyplot(percent_land_consumption ~ year | flow_direction ,data=tb_land_summarized2,
+             type="b",
+             ylab="% of land in QR", 
+             main="Livestock land consumption as percentage of land")
+
+p6
+
+#### Writing the tables
+tb_land_livestock$total_land_consumed <- total_land_consumed_qr
+
+tb_land_summarized_livestock_filename <- paste("tb_land_summarized_","livestock","_by_product_year",out_suffix,".txt",sep="")
+tb_land_summarized2_A_B_C_livestock_filename <- paste("tb_land_summarized2_","livestock","_by_flow_A_B_C_year",out_suffix,".txt",sep="")
+tb_land_livestock_filename <- paste("tb_land_","livestock", out_suffix,".txt",sep="")
+  
+write.table(tb_land_summarized,file= file.path(outDir,tb_land_summarized_livestock_filename) ,sep=",")
+write.table(tb_land_summarized2,file=file.path(outDir,tb_land_summarized2_A_B_C_livestock_filename),sep=",")
+write.table(tb_land_livestock,file=file.path(outDir,tb_land_livestock_filename),sep=",")
+            
 ###################################################################
 #################### PART 6: CONVERSION FOR A SET OF AGRICULTURAL CROPS #############
 
@@ -726,9 +760,9 @@ tb_conversion_rate_crop <- read.table(file.path(inDir, filename_conversion_rate_
                                       header=T,stringsAsFactors = F,sep=",")
 tb_conversion_rate_crop$NOMPRODUCT
 
-names(table(tb_livestock$NOMPRODUCT))
-names(table(tb_livestock$TRANSLATION))
-barplot(table(tb_livestock$NOMPRODUCT),names.arg=names(table(tb_livestock$NOMPRODUCT)),las=2)
+#names(table(tb_livestock$NOMPRODUCT))
+#names(table(tb_livestock$TRANSLATION))
+#barplot(table(tb_livestock$NOMPRODUCT),names.arg=names(table(tb_livestock$NOMPRODUCT)),las=2)
 
 #select relevant product
 selected_nom_product <- tb_conversion_rate_crop$NOMPRODUCT
@@ -736,97 +770,71 @@ selected_nom_product <- tb_conversion_rate_crop$NOMPRODUCT
 
 tb_to_convert <- subset(tb , tb$NOMPRODUCT %in% selected_nom_product)
 table(tb_to_convert$NV_UMEDIDA) #OK all TONELADA
+barplot(table(tb_to_convert$NOMPRODUCT),names.arg=names(table(tb_to_convert$NOMPRODUCT)),las=2)
 
 names(tb_conversion_rate_crop) <- c("conversion_rate","NOMPRODUCT")
 
-convert_product_to_land_unit <- function(conversion_rate_val,nom_product,tb_products){
-  
-  #First match product:
-  tb_to_convert <- subset(tb_products,tb_products$NOMPRODUCT== nom_product)
-  tb_to_convert$land_consumption <- tb_to_convert$NV_CANT*conversion_rate_val
-
-  #tb_summarized$percent_land_consumption1 <- (tb_summarized$land_consumption1/total_land_consumed_qr)*100 
-  #tb_summarized <- aggregate(NV_CANT ~ year + product_cat , data = tb_to_convert, sum)
-  return(tb_to_convert)
-}
-
-apply_conversion_rate <- function(i,tb_conversion_rate,tb_products){
-  
-  convert_product_to_land_unit(tb_conversion_rate$conversion_rate[i],
-                               tb_conversion_rate$NOMPRODUCT[i],
-                               tb_products = tb_products)
-  
-}
-
-#test <- lapply(1:1,FUN=apply_conversion_rate,
-#                                     tb_conversion_rate=tb_conversion_rate_crop,
-#                                     tb_products=tb_to_convert)
-#test<-test[[1]]
-
-#test$NOMPRODUCT
-#range(table(test$IDMOVILIZA))
-#test <- lapply(16:16,FUN=apply_conversion_rate,
-#               tb_conversion_rate=tb_conversion_rate_crop,
-#               tb_products=tb_to_convert)
-
-#can use mclapply if needed
 list_converted_tb_products <- lapply(1:nrow(tb_conversion_rate_crop),FUN=apply_conversion_rate,
                               tb_conversion_rate=tb_conversion_rate_crop,
                               tb_products=tb_to_convert)
 
 sum(unlist(lapply(list_converted_tb_products,FUN=nrow)))
 
-tb_land_crops <- do.call(rbind,list_converted_tb_products)
-dim(tb_land_crops)
-
-
-tb_summarized <- aggregate(land_consumption ~ year + product_cat , data = tb_land_crops , sum)
-tb_summarized$percent_land_consumption <- (tb_summarized$land_consumption/total_land_consumed_qr)*100
-options(scipen=999)
-tb_summarized2 <- aggregate(land_consumption ~ year + NOMPRODUCT , data = tb_land_crops , sum)
-tb_summarized2$percent_land_consumption <- (tb_summarized2$land_consumption/total_land_consumed_qr)*100
-
-p4 <- xyplot(percent_land_consumption ~ year | NOMPRODUCT,data=tb_summarized2,
-             type="b",
-             ylab="Head", 
-             main="Livestock flow extraction total by year ")
-p4
-#drop melaza
-tb_summarized3 <- tb_summarized2[!tb_summarized2$NOMPRODUCT=="MELAZA",]
-p5 <- xyplot(percent_land_consumption ~ year | NOMPRODUCT,data=tb_summarized3,
-             type="b",
-             ylab="Head", 
-             main="Livestock flow extraction total by year ")
-
-plot(tb_summarized$percent_land_consumption ~year,data=tb_summarized,type="b",
-     ylab="% of land in QR",
-     main="Crop land consumption as percentage of land")
-plot(tb_summarized$land_consumption ~year,data=tb_summarized,type="b",main="crop")
-
-tb_summarized$land_consumption1 <- tb_summarized$NV_CANT*conversion_rate[1]
-tb_summarized$percent_land_consumption3 <- (tb_summarized$land_consumption3/total_land_consumed_qr)*100 
-
-#write.table()
-plot(tb_summarized$percent_land_consumption1 ~year,data=tb_summarized,type="b",main=paste0("cow ",conversion_rate[1]))
-
-
+tb_land_agri <- do.call(rbind,list_converted_tb_products)
+dim(tb_land_agri)
 ### Get data for A and B etc...?
-dim(tb_land_crops)
-
+dim(tb_land_agri)
 
 #tb_summarized <- aggregate(land_consumption ~ year + product_cat , data = tb_land_crops , sum)
-tb_land_crops$percent_land_consumption <- (tb_land_crops$land_consumption/total_land_consumed_qr)*100
+tb_land_agri$percent_land_consumption <- (tb_land_agri$land_consumption/total_land_consumed_qr)*100
 
-#tb_summary6 <- aggregate(percent_land_consumption ~ NOMPRODUCT + ORIG_DEST_HINT + flow_direction , data = tb_land_crops, sum)
-#tb_summary7 <- aggregate(percent_land_consumption ~ product_cat + ORIG_DEST_HINT + flow_direction , data = tb_land_crops, sum)
-#tb_summary8 <- aggregate(percent_land_consumption ~ product_cat + ORIG_DEST_HINT + flow_direction + year , data = tb_land_crops, sum)
+tb_land_summarized <- aggregate(land_consumption ~ year + product_cat , data = tb_land_agri , sum)
+tb_land_summarized$total_land_consumed <- total_land_consumed_qr
 
-tb_summary6 <- aggregate(percent_land_consumption ~ flow_direction + year, data = tb_land_crops, sum)
-wr
-p6 <- xyplot(percent_land_consumption ~ year | flow_direction ,data=tb_summary9,
+tb_land_summarized$percent_land_consumption <- (tb_land_summarized$land_consumption/total_land_consumed_qr)*100
+options(scipen=999)
+tb_land_summarized2 <- aggregate(land_consumption ~ year + NOMPRODUCT , data = tb_land_agri , sum)
+tb_land_summarized2$percent_land_consumption <- (tb_land_summarized2$land_consumption/total_land_consumed_qr)*100
+tb_land_summarized2$total_land_consumed <- total_land_consumed_qr
+
+p4 <- xyplot(percent_land_consumption ~ year | NOMPRODUCT,data=tb_land_summarized2,
              type="b",
              ylab="Head", 
              main="Livestock flow extraction total by year ")
-p7
+p4 #not using right now
+#drop melaza
+tb_land_summarized3 <- tb_land_summarized2[!tb_land_summarized2$NOMPRODUCT=="MELAZA",]
+p5 <- xyplot(percent_land_consumption ~ year | NOMPRODUCT,data=tb_land_summarized3,
+             type="b",
+             ylab="Head", 
+             main="AGRI flow extraction total by year ")
+p5
+#### For the results and figures
+
+plot(tb_land_summarized$percent_land_consumption ~year,data=tb_land_summarized,type="b",
+     ylab="% of land in QR",
+     main="AGRI land consumption as percentage of land")
+
+#plot(tb_summarized$land_consumption ~year,data=tb_summarized,type="b",main="crop")
+
+tb_land_summarized2 <- aggregate(percent_land_consumption ~ flow_direction + year, data =  tb_land_agri, sum)
+
+p6 <- xyplot(percent_land_consumption ~ year | flow_direction ,data=tb_land_summarized2,
+             type="b",
+             ylab="% of land in QR", 
+             main="AGRI land consumption as percentage of land")
+
+p6
+
+#### Writing the tables
+tb_land_agri$total_land_consumed <- total_land_consumed_qr
+
+tb_land_summarized_agri_filename <- paste("tb_land_summarized_","agri","_by_product_year",out_suffix,".txt",sep="")
+tb_land_summarized2_A_B_C_agri_filename <- paste("tb_land_summarized2_","agri","_by_flow_A_B_C_year",out_suffix,".txt",sep="")
+tb_land_agri_filename <- paste("tb_land_","agri", out_suffix,".txt",sep="")
+
+write.table(tb_land_summarized,file= file.path(outDir,tb_land_summarized_agri_filename) ,sep=",")
+write.table(tb_land_summarized2,file=file.path(outDir,tb_land_summarized2_A_B_C_agri_filename),sep=",")
+write.table(tb_land_agri,file=file.path(outDir,tb_land_agri_filename),sep=",")
 
 #################################  END OF FILE ###########################################
