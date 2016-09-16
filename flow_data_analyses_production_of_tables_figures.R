@@ -5,10 +5,10 @@
 #
 #AUTHOR: Benoit Parmentier                                                                       
 #DATE CREATED:08/30/2016 
-#DATE MODIFIED: 09/15/2016
+#DATE MODIFIED: 09/16/2016
 #
 #PROJECT: Flow and land cover change in QR and GYR with Marco Millones
-#COMMIT: generating table 5 and more corrections
+#COMMIT: adding information to generate figures for land consumption for agri
 #
 ##################################################################################################
 
@@ -35,7 +35,10 @@
 # Figure 8: Decoupling by year  for Quintana Roo expressed by quantities of flows by distance (Hinterland variable).
 # Figure 9: Decoupling of Quintana Roo expressed by total number of flows (top) and total quantities (bottom) by distance (Hinterland variable) for three type of products: agriculture, meat and livestock.
 
-###Loading r library and packages
+#Figure 10: Land consumption expressed by percentage of landscape converted for crop and cattle activities aggregated by year. 
+#Figure 11: Flow conversions (A:inflow, B:outflows, C:internal flow) converted into land consumption expressed by percentage of landscape converted for crop and cattle activities aggregated by year.
+
+### Loading r library and packages
 
 library(raster)                            # loading the raster package
 library(gtools)                            # loading ...
@@ -161,6 +164,10 @@ flow_aggregated_by_product_quantity_by_A_B_C_by_year_tb_summary5_filename <- pas
 hinterland_by_product_sum_filename <- paste("hinterland_tb_product_sum_",out_suffix,".txt",sep="")
 hinterland_year_by_product_sum_filename <- paste("hinterland_year_tb_product_sum_",out_suffix,".txt",sep="")
 
+tb_land_summarized_agri_filename <- paste("tb_land_summarized_","agri","_by_product_year",out_suffix,".txt",sep="")
+tb_land_summarized2_A_B_C_agri_filename <- paste("tb_land_summarized2_","agri","_by_flow_A_B_C_year",out_suffix,".txt",sep="")
+tb_land_agri_filename <- paste("tb_land_","agri", out_suffix,".txt",sep="")
+
 ########################################################
 ##############  Start of th script  ##############
 
@@ -186,12 +193,17 @@ tb_summary2 <- read.table(file.path(inDir,flow_by_product_extraction_tb_summary2
 tb_summary4 <- read.table(file.path(inDir,flow_aggregated_by_product_origin_dest_tb_summary4_filename),header=T,sep=",") 
 tb_summary5 <- read.table(file.path(inDir,flow_aggregated_by_product_quantity_by_A_B_C_by_year_tb_summary5_filename ),header=T,sep=",") 
 
-
 #hinterland_by_product_sum_filename <- "hinterland_tb_product_sum_flow_08302016.txt"
 #hinterland_year_by_product_sum_filename <- "hinterland_year_tb_product_sum_flow_08302016.txt"
 
 hinterland_year_tb  <- read.table(file.path(inDir,hinterland_by_product_sum_filename),header=T,sep=",") 
 hinterland_tb  <- read.table(file.path(inDir,hinterland_year_by_product_sum_filename),header=T,sep=",")
+
+#### Land consumption from conversion rates
+
+tb_land_summarized_agri <- read.table(file.path(inDir,tb_land_summarized_agri_filename),header=T ,sep=",")
+tb_land_summarized2_agri <- read.table(file.path(inDir,tb_land_summarized2_A_B_C_agri_filename),header=T,sep=",")
+write.table(tb_land_agri,file=file.path(outDir,tb_land_agri_filename),sep=",")
 
 #################################
 ############## Part 0: Generate table ################
@@ -259,6 +271,7 @@ write.table(df_table5,file=table5_filename,sep=",")
 # Figure 8: Decoupling by year  for Quintana Roo expressed by quantities of flows by distance (Hinterland variable).
 # Figure 9: Decoupling of Quintana Roo expressed by total number of flows (top) and total quantities (bottom) by distance (Hinterland variable) for three type of products: agriculture, meat and livestock.
 
+#Figure 11. Flow conversions (A:inflow, B:outflows, C=internal flow) converted into land consumption expressed by percentage of landscape converted for crop and cattle activities aggregated by year.
 
 #########
 ##### Figure 5: # Figure 5: Flows quantities and import, export and internal flows.
@@ -474,6 +487,43 @@ dev.off()
 
 ######### Figure 9: decoupling: aggregated flows by total numbers and quantities for three products
 # Figure 9: Decoupling of Quintana Roo expressed by total number of flows (top) and total quantities (bottom) by distance (Hinterland variable) for three type of products: agriculture, meat and livestock.
+
+
+######### Figure 10:
+
+tb_land_agri$total_land_consumed <- total_land_consumed_qr
+
+tb_land_summarized_agri_filename <- paste("tb_land_summarized_","agri","_by_product_year",out_suffix,".txt",sep="")
+tb_land_summarized2_A_B_C_agri_filename <- paste("tb_land_summarized2_","agri","_by_flow_A_B_C_year",out_suffix,".txt",sep="")
+tb_land_agri_filename <- paste("tb_land_","agri", out_suffix,".txt",sep="")
+
+write.table(tb_land_summarized,file= file.path(outDir,tb_land_summarized_agri_filename) ,sep=",")
+write.table(tb_land_summarized2,file=file.path(outDir,tb_land_summarized2_A_B_C_agri_filename),sep=",")
+write.table(tb_land_agri,file=file.path(outDir,tb_land_agri_filename),sep=",")
+
+plot(tb_summarized$percent_land_consumption ~year,data=tb_summarized,type="b",
+     ylab="% of land in QR",
+     main="Crop land consumption as percentage of land")
+
+
+
+
+
+######### Figure 10:
+
+#Figure 11. Flow conversions (A:inflow, B:outflows, C=internal flow) converted into land consumption expressed by percentage of landscape converted for crop and cattle activities aggregated by year.
+
+#plot(tb_summarized$land_consumption ~year,data=tb_summarized,type="b",main="crop")
+
+tb_land_summarized2 <- aggregate(percent_land_consumption ~ flow_direction + year, data =  tb_land_agri, sum)
+
+p6 <- xyplot(percent_land_consumption ~ year | flow_direction ,data=tb_land_summarized2,
+             type="b",
+             ylab="% of land in QR", 
+             main="Crop land consumption as percentage of land")
+
+p6
+
 
 
 ################## END OF SCRIPT #####################
