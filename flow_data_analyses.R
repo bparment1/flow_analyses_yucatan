@@ -8,7 +8,7 @@
 #DATE MODIFIED: 09/16/2016
 #
 #PROJECT: Flow, land cover change with Marco Millones
-#COMMIT: adding more conversion factors from agricultural product
+#COMMIT: adding data from figure 9, hinterland analysis
 #
 ##################################################################################################
 #
@@ -501,15 +501,6 @@ test_all <- aggregate(NV_CANT ~ product_cat + year + flow_direction + extraction
 #compare:a, b-c,d-e,f-g
 #compare:internal,GYR,MEX,W
 
-#tb$flow_dist_cat <- revalue(tb$flow_types,
-#                         c("a"  = "0", # internal consuption: C
-#                           "b" = "1", # QR->GYR outflow: B
-#                           "c" = "1", # inflow: A 
-#                           "d" = "2", # d) QR->MX: B (outflow)
-#                          "e" = "2", # e) QR<- MX: A (inflow) 
-#                          "f" = "3",   # f) QR->W: B (outflow)
-#                           "g" = "3")) # g) QR-<W: A (inflow)
-
 tb$NV_CANT <- as.numeric(tb$NV_CANT)
 
 #hinterland_tb <- aggregate(NV_CANT ~ product_cat + year + flow_direction + extraction + consumption, 
@@ -520,23 +511,32 @@ hinterland_year_tb <- aggregate(NV_CANT ~ flow_dist_cat + product_cat + year,
 
 hinterland_tb <- aggregate(NV_CANT ~ flow_dist_cat + product_cat, 
                            data = tb, sum)
+#####
+
+tb$transaction_bool <- 1 
+
+
+hinterland_tb_quant <- aggregate(NV_CANT ~ product_cat + ORIG_DEST_HINT + flow_direction + flow_dist_cat , data = tb, sum)
+hinterland_tb_trans <- aggregate(transaction_bool ~ product_cat + ORIG_DEST_HINT + flow_direction + flow_dist_cat , data = tb, sum)
+
+hinterland_tb_quant_trans <- hinterland_tb_quant
+hinterland_tb_quant_trans$transaction_bool <- hinterland_tb_trans$transaction_bool
+
+hinterland_tb_quant_trans$flow_dist_label <- revalue(hinterland_tb_quant_trans$flow_dist_cat,
+                                                     c("0"  = "QR", # internal consuption: C
+                                                       "1" = "GYR", # QR->GYR outflow: B
+                                                       "2" = "MEX", # e) QR<- MX: A (inflow) 
+                                                       "3" = "W")) # g) QR-<W: A (inflow) and W->QR
+#drop world because not enough data:
+hinterland_tb_quant_trans <- subset(hinterland_tb_quant_trans,!ORIG_DEST_HINT%in% c("W_QR","QR_W"))
 
 #### Writing the table
 write.table(hinterland_tb,file=paste("hinterland_tb_product_sum_",out_suffix,".txt",sep=""),sep=",")
 write.table(hinterland_year_tb,file=paste("hinterland_year_tb_product_sum_",out_suffix,".txt",sep=""),sep=",")
+write.table(hinterland_tb_quant_trans,file=paste("hinterland_tb_quant_trans_year_tb_product_sum_",out_suffix,".txt",sep=""),sep=",")
 
-#####
-
-tb$transaction_bool <- 1 
-tb_summary4 <- aggregate(transaction_bool ~ product_cat + ORIG_DEST_HINT + flow_direction , data = tb, sum)
-tb_summary5
-
-### Reorganizing data table: to get A+B+C and A+C by year
-# get the relevant data
-
-tb_summary5 <- aggregate(NV_CANT ~ product_cat + ORIG_DEST_HINT + flow_direction , data = tb, sum)
-
-hinterland_tb_quant_trans <- subset(tb_summary4,!ORIG_DEST_HINT%in% c("W_QR","QR_W"))
+####### Quick analysis
+#### Agri,
 
 tb_tmp <- subset(hinterland_tb_quant_trans,product_cat=="agri")
 barplot(table(tb_tmp$flow_dist_cat),main="agri",names.arg=c("QR","GYR","MEX"))
@@ -711,6 +711,8 @@ tb_conversion_rate_livestock1 <- data.frame(conversion_rate= 1/0.3 , NOMPRODUCT=
 tb_conversion_rate_livestock2 <- data.frame(conversion_rate= 1/0.5 , NOMPRODUCT=selected_livestock)
 tb_conversion_rate_livestock3 <- data.frame(conversion_rate= 1/1 , NOMPRODUCT=selected_livestock)
 
+tb_conversion_rate_livestock1_filename <- paste0("tb_conversion_rate_livestock1_",out_suffix,".txt")
+write.table(tb_conversion_rate_livestock1, file= file.path(outDir,tb_conversion_rate_livestock1_filename))
 
 #can use mclapply if needed
 list_converted_tb_products <- lapply(1:nrow(tb_conversion_rate_livestock1),FUN=apply_conversion_rate,
