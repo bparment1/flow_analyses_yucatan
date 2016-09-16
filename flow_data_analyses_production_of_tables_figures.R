@@ -8,7 +8,7 @@
 #DATE MODIFIED: 09/16/2016
 #
 #PROJECT: Flow and land cover change in QR and GYR with Marco Millones
-#COMMIT: #more changes to generate figures for land consumption for livestock and agri
+#COMMIT: generating figure 9 related to hinterland in the production script
 
 ##################################################################################################
 
@@ -163,6 +163,7 @@ flow_aggregated_by_product_quantity_by_A_B_C_by_year_tb_summary5_filename <- pas
 #hinterland_year_by_product_sum_filename <- "hinterland_year_tb_product_sum_flow_08302016.txt"
 hinterland_by_product_sum_filename <- paste("hinterland_tb_product_sum_",out_suffix,".txt",sep="")
 hinterland_year_by_product_sum_filename <- paste("hinterland_year_tb_product_sum_",out_suffix,".txt",sep="")
+hinterland_tb_quant_trans_year_product_sum_filename <- paste("hinterland_tb_quant_trans_year_tb_product_sum_",out_suffix,".txt",sep="")
 
 ### Land consumption related files
 #agri
@@ -203,7 +204,8 @@ tb_summary5 <- read.table(file.path(inDir,flow_aggregated_by_product_quantity_by
 
 hinterland_year_tb  <- read.table(file.path(inDir,hinterland_by_product_sum_filename),header=T,sep=",") 
 hinterland_tb  <- read.table(file.path(inDir,hinterland_year_by_product_sum_filename),header=T,sep=",")
-
+hinterland_tb_quant_trans <- read.table(file.path(inDir,hinterland_tb_quant_trans_year_product_sum_filename),header=T,sep=",")
+            
 #### Land consumption from conversion rates
 
 #agri
@@ -335,8 +337,8 @@ dev.off()
 tb_summary3$consumption_val <- as.character(tb_summary3$consumption)
 
 tb_summary3$consumption_cat <- revalue(tb_summary3$consumption_val,
-                                 c("0"  = "outside", 
-                                   "1" = "inside")) 
+                                 c("0"  = "B", 
+                                   "1" = "A + C")) 
 
 ## Local Consumption is A+C (defined as comsumption of from import and locally produced food)
 #this is external produciton of food which is imported (A) or consumed locally (C)
@@ -388,8 +390,8 @@ dev.off()
 tb_summary2$extraction_val <- as.character(tb_summary2$extraction)
 
 tb_summary2$extraction_cat <- revalue(tb_summary2$extraction_val,
-                            c("0"  = "outside", 
-                              "1" = "inside")) 
+                            c("0"  = "A", 
+                              "1" = "B + C")) 
 
 p4 <- xyplot(NV_CANT ~ year | extraction_cat,subset(tb_summary2,tb_summary2$product_cat=="agri"),
              type="b",
@@ -467,7 +469,6 @@ barplot(hint_tmp$NV_CANT,names.arg=x_labels,las=2,
 
 dev.off()
 
-
 #### Meat hinterland
 
 #dates_val <- c(sort(rep(2001:2008,3)),rep(2009,4))
@@ -499,6 +500,61 @@ dev.off()
 ######### Figure 9: decoupling: aggregated flows by total numbers and quantities for three products
 # Figure 9: Decoupling of Quintana Roo expressed by total number of flows (top) and total quantities (bottom) by distance (Hinterland variable) for three type of products: agriculture, meat and livestock.
 
+hinterland_tb_quant_trans
+#hinterland_tb_quant_trans$flow_dist_label <- revalue(hinterland_tb_quant_trans$flow_dist_cat,
+#                                                     c("0"  = "QR", # internal consuption: C
+#                                                       "1" = "GYR", # QR->GYR outflow: B
+#                                                       "2" = "MEX")) # g) QR-<W: A (inflow) and W->QR
+
+x_label <- c("QR","GYR","MEX")
+
+
+hinterland_tb_quant <- aggregate(NV_CANT ~ flow_dist_cat + product_cat ,data=hinterland_tb_quant_trans,sum)
+hinterland_tb_trans <- aggregate(transaction_bool ~ flow_dist_cat + product_cat ,data=hinterland_tb_quant_trans,sum)
+
+
+### Now plot the figures
+png_filename9_bottom <- paste("Figure","_9_bottom_","agri_hinterland_cat_sum_",out_suffix,".png", sep="")
+### Now plot the figures
+png_filename9_top <- paste("Figure","_9_top_","agri_hinterland_cat_sum_",out_suffix,".png", sep="")
+
+res_pix<-480*0.9
+col_mfrow<- 3
+row_mfrow<- 1
+m <- rbind(c(1, 3))
+#print(m)
+
+png(filename=png_filename9_bottom,
+    width=col_mfrow*res_pix,height=row_mfrow*res_pix)
+
+par(mfrow=c(row_mfrow,col_mfrow))
+
+hinterland_tb_tmp <- subset(hinterland_tb_quant,product_cat=="agri")
+barplot(hinterland_tb_tmp$NV_CANT,main="AGRI volumes",names.arg=x_label,cex.axis=1.1,cex.lab=1.3,ylab="Tons")
+
+hinterland_tb_tmp <- subset(hinterland_tb_quant,product_cat=="meat")
+barplot(hinterland_tb_tmp$NV_CANT,main="MEAT volumes",names.arg=x_label,cex.axis=1.1,cex.lab=1.3,ylab="Tons")
+
+hinterland_tb_tmp <- subset(hinterland_tb_quant,product_cat=="livestock")
+barplot(hinterland_tb_tmp$NV_CANT,main="LIVESTOCK volumes",names.arg=x_label,cex.axis=1.1,cex.lab=1.3,ylab="Heads")
+
+dev.off()
+
+png(filename=png_filename9_top,
+    width=col_mfrow*res_pix,height=row_mfrow*res_pix)
+
+par(mfrow=c(row_mfrow,col_mfrow))
+
+hinterland_tb_tmp <- subset(hinterland_tb_trans,product_cat=="agri")
+barplot(hinterland_tb_tmp$transaction_bool,main="AGRI transactions",names.arg=x_label,cex.axis=1.1,cex.lab=1.3,ylab="Number of transactions")
+
+hinterland_tb_tmp <- subset(hinterland_tb_trans,product_cat=="meat")
+barplot(hinterland_tb_tmp$transaction_bool,main="MEAT transactions",names.arg=x_label,cex.axis=1.1,cex.lab=1.3,ylab="Number of transactions")
+
+hinterland_tb_tmp <- subset(hinterland_tb_trans,product_cat=="livestock")
+barplot(hinterland_tb_tmp$transaction_bool,main="LIVESTOCK transactions",names.arg=x_label,cex.axis=1.1,cex.lab=1.3,ylab="Number of transactions")
+
+dev.off()
 
 ######### Figure 10:
 
