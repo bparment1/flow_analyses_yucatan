@@ -5,10 +5,10 @@
 #
 #AUTHOR: Benoit Parmentier                                                                       
 #DATE CREATED:07/11/2016 
-#DATE MODIFIED: 09/15/2016
+#DATE MODIFIED: 09/16/2016
 #
 #PROJECT: Flow, land cover change with Marco Millones
-#COMMIT: additional screening and correction to table 5
+#COMMIT: adding more conversion factors from agricultural product
 #
 ##################################################################################################
 #
@@ -67,7 +67,8 @@ load_obj <- function(f){
 
 #Input file name with the flow data
 filename_flow <- "MO1-9_ALL.txt"
-
+filename_conversion_rate_crop <- "Crop_conversion_rates_09162016.csv"
+  
 CRS_WGS84 <- "+proj=longlat +ellps=WGS84 +datum=WGS84 +towgs84=0,0,0" #Station coords WGS84 # CONST 2
 proj_str<- CRS_WGS84 #param 2
 CRS_reg <- CRS_WGS84 # PARAM 3
@@ -75,7 +76,7 @@ CRS_reg <- CRS_WGS84 # PARAM 3
 file_format <- ".txt" #PARAM 4
 NA_value <- -9999 #PARAM5
 NA_flag_val <- NA_value #PARAM6
-out_suffix <-"flow_09112016" #output suffix for the files and ouptu folder #PARAM 7
+out_suffix <-"flow_09162016" #output suffix for the files and ouptu folder #PARAM 7
 create_out_dir_param=TRUE #PARAM8
 num_cores <- 4 #PARAM 9
 
@@ -137,17 +138,8 @@ tb <- subset(tb,tb$year> 2000 )
 tb$X1.9_ORIG_CVE_HINT[tb$X1.9_ORIG_CVE_HINT=="MEXICO"] <- "MEX" #Origin of product
 tb$X1.9_DEST_CVE_HINT[tb$X1.9_DEST_CVE_HINT=="MEXICO"] <- "MEX" #Destination of product
 
-#> unique(tb$X1.9_ORIG_CVE_HINT)
-#[1] "QR"  "MEX" "GYR" NA    ""    "W"  
-
 table(tb$X1.9_ORIG_CVE_HINT)
-#[1] "QR"  "MEX" "GYR" NA    ""    "W"  
-
 table(tb$X1.9_ORIG_CVE_HINT)
-
-#GYR    MEX     QR      W 
-#141 185025 181118  88711      2 
-
 table(tb$X1.9_DEST_CVE_HINT)
 
 #GYR    MEX     QR      W 
@@ -163,8 +155,7 @@ x <- (table(tb$X1.9_ORIG_CVE_HINT))
 print(x)
 x <- (table(tb$X1.9_DEST_CVE_HINT))
 print(x)
-#barplot(formatC(x, format = "d"))
-#barplot(as.integer(tb$X1.9_DEST_CVE_HINT))
+
 barplot(x)
 
 ### Now prepare the data:
@@ -173,9 +164,6 @@ barplot(x)
 #X1.9_ORIG_CVE_HINT,X1.9_DEST_CVE_HINT
 
 #Outflow: need to recode hinterland with: 1 if HINT is GYR, MEX, MEXICO and Inflow: Examine X1.9_ORIG_CVE_HINT and X1.9_DEST_CVE_HINT, recode 1 if: 
-#  MEX-QR
-#  MEXICO-QR
-#  GYR-QR
 #Internal consumption: QR-QR
 
 #a) QR<->QR
@@ -189,12 +177,6 @@ barplot(x)
 ### Do a quick crosstab
 xtb <- table(tb$X1.9_ORIG_CVE_HINT,tb$X1.9_DEST_CVE_HINT)
 print(xtb)
-
-#       GYR    MEX     QR      W
-#GYR    153   2656 182190      3
-#MEX   1232     29 179836      7
-#QR   40184  14564  33122      1
-#W        0      0      2      0
 
 ### For this data only these ones are allowed:
 #       GYR    MEX     QR      W
@@ -362,7 +344,7 @@ duplicate_transcation_df <- subset(tb,tb$IDMOVILIZA %in% as.character(duplicate_
 codes_to_remove <- as.character(duplicate_transaction$Var1)
 tb <- subset(tb,!tb$IDMOVILIZA %in% codes_to_remove)
 
-### screening non-food related zacate
+#### Additional screening non-food item/commoditiy related zacate
 #unique(tb$NOMPRODUCT)
 
 #<- sum(tb$NOMPRODUCT == "ZACATE")
@@ -511,8 +493,9 @@ xyplot(NV_CANT ~ year | consumption,subset(tb_summary3,tb_summary3$product_cat==
 
 test_all <- aggregate(NV_CANT ~ product_cat + year + flow_direction + extraction + consumption, 
                                     data = tb, sum)
-                  
-################## Hinterland Analyses ######
+ 
+##################################################
+############# PART 3: Hinterland analyses ##########                 
 
 #compare:a, b-c,d-e,f-g
 #compare:internal,GYR,MEX,W
@@ -580,8 +563,8 @@ mean_y <-tapply(tb_tmp$y,tb_tmp$flow_dist_cat, mean, na.rm=TRUE)
 sum_y <-tapply(tb_tmp$y,tb_tmp$flow_dist_cat, sum, na.rm=TRUE)
 barplot(sum_y,main="meat",names.arg=c("QR","GYR","MEX","MEX"))
 
-##########################
-#### PART 4: CONVERSION OF FLOWS INTO LAND AREA
+#########################################################
+#### PART 4: CONVERSION OF FLOWS INTO LAND AREA: First obtain total land available ########
 
 ### Step 1: Get the area covered by Quintaroo and available land for products
 
@@ -654,7 +637,10 @@ data_df_spdf_qr$land_consumed <- data_df_spdf_qr$nfp + data_df_spdf_qr$ch
 
 land_consumed_qr <- data_df_spdf_qr$land_consumed*1/0.01
 
-total_land_consumed_qr <- sum(land_consumed_qr) #This is the total land available
+total_land_consumed_qr <- sum(land_consumed_qr) #This is the total land available over 2000-2009?
+
+###################################################################
+#################### PART5: CONVERSION FOR CATTLE COW AND RELATED #############
 
 ###### NOW SELECT PRODUCT AND COMPARE TO AVAILABLE LAND
 ### Step 1: conversion of flow to land use
@@ -771,6 +757,100 @@ ratio_used <- c(
 df_land_consumed2 <- data.frame(ratio_used,conversion_rate)
 
 df_land_consumed <- rbind(df_land_consumed1,df_land_consumed2)
+
+###################################################################
+#################### PART 6: CONVERSION FOR A SET OF AGRICULTURAL CROPS #############
+
+tb_conversion_rate_crop <- read.table(file.path(inDir, filename_conversion_rate_crop),
+                                      header=T,stringsAsFactors = F,sep=",")
+tb_conversion_rate_crop$NOMPRODUCT
+
+names(table(tb_livestock$NOMPRODUCT))
+names(table(tb_livestock$TRANSLATION))
+barplot(table(tb_livestock$NOMPRODUCT),names.arg=names(table(tb_livestock$NOMPRODUCT)),las=2)
+
+#select relevant product
+selected_nom_product <- tb_conversion_rate_crop$NOMPRODUCT
+#additional_cat1 <- c("CAPRINOS EN PIE","PORCINOS EN PIE DE CRIA","PORCINOS EN PIE","DESTETES PORCINO")
+
+tb_to_convert <- subset(tb , tb$NOMPRODUCT %in% selected_nom_product)
+table(tb_to_convert$NV_UMEDIDA) #OK all TONELADA
+
+names(tb_conversion_rate_crop) <- c("conversion_rate","NOMPRODUCT")
+
+convert_product_to_land_unit <- function(conversion_rate_val,nom_product,tb_products){
+  
+  #First match product:
+  tb_to_convert <- subset(tb_products,tb_products$NOMPRODUCT== nom_product)
+  tb_to_convert$land_consumption <- tb_to_convert$NV_CANT*conversion_rate_val
+
+  #tb_summarized$percent_land_consumption1 <- (tb_summarized$land_consumption1/total_land_consumed_qr)*100 
+  #tb_summarized <- aggregate(NV_CANT ~ year + product_cat , data = tb_to_convert, sum)
+  return(tb_to_convert)
+}
+
+apply_conversion_rate <- function(i,tb_conversion_rate,tb_products){
+  
+  convert_product_to_land_unit(tb_conversion_rate$conversion_rate[i],
+                               tb_conversion_rate$NOMPRODUCT[i],
+                               tb_products = tb_products)
+  
+}
+
+#test <- lapply(1:1,FUN=apply_conversion_rate,
+#                                     tb_conversion_rate=tb_conversion_rate_crop,
+#                                     tb_products=tb_to_convert)
+#test<-test[[1]]
+
+#test$NOMPRODUCT
+#range(table(test$IDMOVILIZA))
+#test <- lapply(16:16,FUN=apply_conversion_rate,
+#               tb_conversion_rate=tb_conversion_rate_crop,
+#               tb_products=tb_to_convert)
+
+#can use mclapply if needed
+list_converted_tb_products <- lapply(1:nrow(tb_conversion_rate_crop),FUN=apply_conversion_rate,
+                              tb_conversion_rate=tb_conversion_rate_crop,
+                              tb_products=tb_to_convert)
+
+sum(unlist(lapply(list_converted_tb_products,FUN=nrow)))
+
+tb_land_crops <- do.call(rbind,list_converted_tb_products)
+dim(tb_land_crops)
+
+
+tb_summarized <- aggregate(land_consumption ~ year + product_cat , data = tb_land_crops , sum)
+tb_summarized$percent_land_consumption <- (tb_summarized$land_consumption/total_land_consumed_qr)*100
+options(scipen=999)
+tb_summarized2 <- aggregate(land_consumption ~ year + NOMPRODUCT , data = tb_land_crops , sum)
+tb_summarized2$percent_land_consumption <- (tb_summarized2$land_consumption/total_land_consumed_qr)*100
+
+p4 <- xyplot(percent_land_consumption ~ year | NOMPRODUCT,data=tb_summarized2,
+             type="b",
+             ylab="Head", 
+             main="Livestock flow extraction total by year ")
+p4
+#drop melaza
+tb_summarized3 <- tb_summarized2[!tb_summarized2$NOMPRODUCT=="MELAZA",]
+p5 <- xyplot(percent_land_consumption ~ year | NOMPRODUCT,data=tb_summarized3,
+             type="b",
+             ylab="Head", 
+             main="Livestock flow extraction total by year ")
+p5
+plot(tb_summarized$percent_land_consumption ~year,data=tb_summarized,type="b",
+     ylab="% of land in QR",
+     main="Crop land consumption as percentage of land")
+plot(tb_summarized$land_consumption ~year,data=tb_summarized,type="b",main="crop")
+
+tb_summarized$land_consumption1 <- tb_summarized$NV_CANT*conversion_rate[1]
+tb_summarized$percent_land_consumption3 <- (tb_summarized$land_consumption3/total_land_consumed_qr)*100 
+
+#write.table()
+plot(tb_summarized$percent_land_consumption1 ~year,data=tb_summarized,type="b",main=paste0("cow ",conversion_rate[1]))
+
+
+### Get data for A and B etc...?
+
 
 
 #################################  END OF FILE ###########################################
