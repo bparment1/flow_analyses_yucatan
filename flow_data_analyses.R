@@ -5,11 +5,17 @@
 #
 #AUTHOR: Benoit Parmentier                                                                       
 #DATE CREATED:07/11/2016 
-#DATE MODIFIED: 09/16/2016
+#DATE MODIFIED: 10/13/2016
 #
 #PROJECT: Flow, land cover change with Marco Millones
-#COMMIT: adding data from figure 9, hinterland analysis
+#COMMIT: generating new data for the revisions 1 of flow paper
 #
+
+## Code used in the current workflow:
+#flow_data_analyses_10132016.R : this generates cleaned table of flows and data table used in analyses and figures
+#flow_data_analyses_production_of_tables_figures_10132016.R: figure and table creation
+#flow_data_analyses_function_09162016.R: function script used in analyses and figures
+
 ##################################################################################################
 #
 ###Loading r library and packages
@@ -77,7 +83,7 @@ CRS_reg <- CRS_WGS84 # PARAM 3
 file_format <- ".txt" #PARAM 4
 NA_value <- -9999 #PARAM5
 NA_flag_val <- NA_value #PARAM6
-out_suffix <-"flow_09162016" #output suffix for the files and ouptu folder #PARAM 7
+out_suffix <-"flow_10132016" #output suffix for the files and ouptu folder #PARAM 7
 create_out_dir_param=TRUE #PARAM8
 num_cores <- 4 #PARAM 9
 
@@ -798,6 +804,7 @@ options(scipen=999)
 tb_land_summarized2 <- aggregate(land_consumption ~ year + NOMPRODUCT , data = tb_land_agri , sum)
 tb_land_summarized2$percent_land_consumption <- (tb_land_summarized2$land_consumption/total_land_consumed_qr)*100
 tb_land_summarized2$total_land_consumed <- total_land_consumed_qr
+
 
 p4 <- xyplot(percent_land_consumption ~ year | NOMPRODUCT,data=tb_land_summarized2,
              type="b",
