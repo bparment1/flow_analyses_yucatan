@@ -5,10 +5,15 @@
 #
 #AUTHOR: Benoit Parmentier                                                                       
 #DATE CREATED:08/30/2016 
-#DATE MODIFIED: 09/16/2016
+#DATE MODIFIED: 10/13/2016
 #
 #PROJECT: Flow and land cover change in QR and GYR with Marco Millones
-#COMMIT: #more changes to generate figures for land consumption for livestock and agri
+#COMMIT: generating figure 9 related to hinterland in the production script
+
+## Code used in the current workflow:
+#flow_data_analyses_10132016.R : this generates cleaned table of flows and data table used in analyses and figures
+#flow_data_analyses_production_of_tables_figures_10132016.R: figure and table creation
+#flow_data_analyses_function_09162016.R: function script used in analyses and figures
 
 ##################################################################################################
 
@@ -25,18 +30,19 @@
 
 ####### FIGURES
 
-# Figure 1: (not in R) Study area, Yucatan and Quintinaro 
-# Figure 2: (not in R) Flow type direction A, B and C (outside R)
-# Figure 3: (not in R) Hinterland and origin/destination: Figure 3. Flows and distance used in generating the “Hinterland” varialbe. All flow transactions were summarized in four categories: 1) QR corresponding to flow internal to Quintina Roo, 2)  GYR corresponding to flow from or to Yucatan peninsula (excluding QR) , 3) MEX corresponding to flow from or to Mexico (excluding GYR and QR); W corresponding to flows from or to the rest of the world (excluding GYR and MEX. 
-# Figure 4: (not in R) Flows and land use (this also shows A,B and C)
-# Figure 5: Flows quantities and import, export and internal flows.
-# Figure 6. Consumption dervied from flow using quantities for the 2001-2009 time period and three type of food products.
-# Figure 7: Production derived from flow using quantities for the 2001-2009 time period and three type of food products.
-# Figure 8: Decoupling by year  for Quintana Roo expressed by quantities of flows by distance (Hinterland variable).
-# Figure 9: Decoupling of Quintana Roo expressed by total number of flows (top) and total quantities (bottom) by distance (Hinterland variable) for three type of products: agriculture, meat and livestock.
+# Figure 1: a) (not in R) Study area, Yucatan and Quintinaro with b) (not in R) Hinterland and origin/destination: Figure 3. Flows and distance used in generating the “Hinterland” varialbe. All flow transactions were summarized in four categories: 1) QR corresponding to flow internal to Quintina Roo, 2)  GYR corresponding to flow from or to Yucatan peninsula (excluding QR) , 3) MEX corresponding to flow from or to Mexico (excluding GYR and QR); W corresponding to flows from or to the rest of the world (excluding GYR and MEX. 
+# Figure 2: a) (not in R) Flow type direction A, B and C (outside R) and b) (not in R) Flows and land use (this also shows A,B and C)
+# Figure 3a: Flows quantities and import, export and internal flows.
+# Figure 3b. Consumption dervied from flow using quantities for the 2001-2009 time period and three type of food products.
+# Figure 3c: Production derived from flow using quantities for the 2001-2009 time period and three type of food products.
+# Figure 4: Decoupling by year  for Quintana Roo expressed by quantities of flows by distance (Hinterland variable).
+# Figure 5: Decoupling of Quintana Roo expressed by total number of flows (top) and total quantities (bottom) by distance (Hinterland variable) for three type of products: agriculture, meat and livestock.
 
-#Figure 10: Land consumption expressed by percentage of landscape converted for crop and cattle activities aggregated by year. 
-#Figure 11: Flow conversions (A:inflow, B:outflows, C:internal flow) converted into land consumption expressed by percentage of landscape converted for crop and cattle activities aggregated by year.
+#Figure 6: Land consumption expressed by percentage of landscape converted for crop and cattle activities aggregated by year. 
+#Figure 7: Combined total percent land consumption year for both crop and cattle
+
+#Supplementary documents:
+#Figure 1s: Flow conversions (A:inflow, B:outflows, C:internal flow) converted into land consumption expressed by percentage of landscape converted for crop and cattle activities aggregated by year.
 
 ### Loading r library and packages
 
@@ -117,7 +123,7 @@ CRS_reg <- CRS_WGS84 # PARAM 3
 file_format <- ".txt" #PARAM 4
 NA_value <- -9999 #PARAM5
 NA_flag_val <- NA_value #PARAM6
-out_suffix <-"flow_09162016" #output suffix for the files and ouptu folder #PARAM 7
+out_suffix <-"flow_10132016" #output suffix for the files and ouptu folder #PARAM 7
 
 create_out_dir_param=TRUE #PARAM8
 num_cores <- 4 #PARAM 9
@@ -126,7 +132,7 @@ num_cores <- 4 #PARAM 9
 #inDir <- "/home/bparmentier/Google Drive/000_Flow_and_LUD_research/Quintana_Roo_Research/Data/output_flow_08302016/"
 #inDir <- NULL #if NULL then generate input dir from out_suffix
 #inDir <- file.path(inDir, paste0("output_flow_",out_suffix))
-inDir <- "/home/bparmentier/Google Drive/000_Flow_and_LUD_research/Quintana_Roo_Research/Data/output_flow_09162016"
+inDir <- "/home/bparmentier/Google Drive/000_Flow_and_LUD_research/Quintana_Roo_Research/Data/output_flow_10132016"
 setwd(inDir)
 
 outDir <- inDir
@@ -163,6 +169,7 @@ flow_aggregated_by_product_quantity_by_A_B_C_by_year_tb_summary5_filename <- pas
 #hinterland_year_by_product_sum_filename <- "hinterland_year_tb_product_sum_flow_08302016.txt"
 hinterland_by_product_sum_filename <- paste("hinterland_tb_product_sum_",out_suffix,".txt",sep="")
 hinterland_year_by_product_sum_filename <- paste("hinterland_year_tb_product_sum_",out_suffix,".txt",sep="")
+hinterland_tb_quant_trans_year_product_sum_filename <- paste("hinterland_tb_quant_trans_year_tb_product_sum_",out_suffix,".txt",sep="")
 
 ### Land consumption related files
 #agri
@@ -203,7 +210,8 @@ tb_summary5 <- read.table(file.path(inDir,flow_aggregated_by_product_quantity_by
 
 hinterland_year_tb  <- read.table(file.path(inDir,hinterland_by_product_sum_filename),header=T,sep=",") 
 hinterland_tb  <- read.table(file.path(inDir,hinterland_year_by_product_sum_filename),header=T,sep=",")
-
+hinterland_tb_quant_trans <- read.table(file.path(inDir,hinterland_tb_quant_trans_year_product_sum_filename),header=T,sep=",")
+            
 #### Land consumption from conversion rates
 
 #agri
@@ -271,116 +279,174 @@ write.table(df_table5,file=table5_filename,sep=",")
 #################################
 ############## Part 1: Figure generation ################
 
-# Figure 1: (not in R) Study area, Yucatan and Quintinaro 
-# Figure 2: (not in R) Flow type direction A, B and C (outside R)
-# Figure 3: (not in R) Hinterland and origin/destination: Figure 3. Flows and distance used in generating the “Hinterland” varialbe. All flow transactions were summarized in four categories: 1) QR corresponding to flow internal to Quintina Roo, 2)  GYR corresponding to flow from or to Yucatan peninsula (excluding QR) , 3) MEX corresponding to flow from or to Mexico (excluding GYR and QR); W corresponding to flows from or to the rest of the world (excluding GYR and MEX. 
-# Figure 4: (not in R) Flows and land use (this also shows A,B and C)
+# Figure 1: a) (not in R) Study area, Yucatan and Quintinaro with b) (not in R) Hinterland and origin/destination: Figure 3. Flows and distance used in generating the “Hinterland” varialbe. All flow transactions were summarized in four categories: 1) QR corresponding to flow internal to Quintina Roo, 2)  GYR corresponding to flow from or to Yucatan peninsula (excluding QR) , 3) MEX corresponding to flow from or to Mexico (excluding GYR and QR); W corresponding to flows from or to the rest of the world (excluding GYR and MEX. 
+# Figure 2: a) (not in R) Flow type direction A, B and C (outside R) and b) (not in R) Flows and land use (this also shows A,B and C)
+# Figure 3a: Flows quantities and import, export and internal flows.
+# Figure 3b. Consumption dervied from flow using quantities for the 2001-2009 time period and three type of food products.
+# Figure 3c: Production derived from flow using quantities for the 2001-2009 time period and three type of food products.
+# Figure 4: Decoupling by year  for Quintana Roo expressed by quantities of flows by distance (Hinterland variable).
+# Figure 5: Decoupling of Quintana Roo expressed by total number of flows (top) and total quantities (bottom) by distance (Hinterland variable) for three type of products: agriculture, meat and livestock.
 
-# Figure 5: Flows quantities and import, export and internal flows.
-# Figure 6. Consumption dervied from flow using quantities for the 2001-2009 time period and three type of food products.
-# Figure 7: Production derived from flow using quantities for the 2001-2009 time period and three type of food products.
-# Figure 8: Decoupling by year  for Quintana Roo expressed by quantities of flows by distance (Hinterland variable).
-# Figure 9: Decoupling of Quintana Roo expressed by total number of flows (top) and total quantities (bottom) by distance (Hinterland variable) for three type of products: agriculture, meat and livestock.
+#Figure 6: Land consumption expressed by percentage of landscape converted for crop and cattle activities aggregated by year. 
+#Figure 7: Combined total percent land consumption year for both crop and cattle
 
-#Figure 10: Land consumption expressed by percentage of landscape converted for crop and cattle activities aggregated by year. 
+#Supplementary material
 #Figure 11: Flow conversions (A:inflow, B:outflows, C:internal flow) converted into land consumption expressed by percentage of landscape converted for crop and cattle activities aggregated by year.
 
 #########
-##### Figure 5: # Figure 5: Flows quantities and import, export and internal flows.
+##### Figure 3: Flows quantities and import, export and internal flows.
 
 ### Need to improve this code later on!!!
 
-p1 <- xyplot(NV_CANT ~ year | flow_direction,subset(tb_summary1,tb_summary1$product_cat=="agri"),
+#p1 <- xyplot(NV_CANT ~ year | flow_direction,subset(tb_summary1,tb_summary1$product_cat=="agri"),
+#             type="b",
+#             ylab="Tons",
+#             main="AGRI flows total by year ")
+title_str <- "Flows total by year" # use this title because it is the one used in the combined plot!! (first plot)
+
+p1 <- xyplot(NV_CANT ~ year ,groups=flow_direction,subset(tb_summary1,tb_summary1$product_cat=="agri"),
              type="b",
              ylab="Tons",
+             main=title_str)
+
+##This combines everything but can't see the differences within the categories
+p1_test <- xyplot(NV_CANT ~ year| product_cat ,groups=flow_direction,tb_summary1,
+                  #y.same=FALSE, option only use for as.layer and c.trellis
+             type="b",
+            ylab="Tons",
              main="AGRI flows total by year ")
 
-p2 <- xyplot(NV_CANT ~ year | flow_direction,subset(tb_summary1,tb_summary1$product_cat=="meat"),
+#xyplot(y~x, groups=z, df)
+
+p2 <- xyplot(NV_CANT ~ year, groups= flow_direction,subset(tb_summary1,tb_summary1$product_cat=="meat"),
              type="b",
              ylab="Tons",
              main="MEAT flows total by year ")
 
-p3 <- xyplot(NV_CANT ~ year | flow_direction,subset(tb_summary1,tb_summary1$product_cat=="livestock"),
+p3 <- xyplot(NV_CANT ~ year, groups = flow_direction,subset(tb_summary1,tb_summary1$product_cat=="livestock"),
        type="b",
        #type="h",
        ylab="Head", 
        main="LIVESTOCK flows total by year ")
 
-png_filename5a <- paste("Figure","_5a_","agri_flow_directions_",out_suffix,".png", sep="")
-png_filename5b <- paste("Figure","_5b_","meat_flow_directions_",out_suffix,".png", sep="")
-png_filename5c <- paste("Figure","_5c_","livestock_flow_directions_",out_suffix,".png", sep="")
+png_filename3a1 <- paste("Figure","_3a1_","agri_flow_directions_",out_suffix,".png", sep="")
+png_filename3a2 <- paste("Figure","_3a2_","meat_flow_directions_",out_suffix,".png", sep="")
+png_filename3a3 <- paste("Figure","_3a3_","livestock_flow_directions_",out_suffix,".png", sep="")
 
 layout_m <- c(1.5,1)
 
-png(png_filename5a,
+png(png_filename3a1,
     height=480*layout_m[2],width=480*layout_m[1])
 print(p1)
 dev.off()
 
-png(png_filename5b,
+png(png_filename3a2,
     height=480*layout_m[2],width=480*layout_m[1])
 print(p2)
 dev.off()
 
-png(png_filename5c,
+png(png_filename3a3,
     height=480*layout_m[2],width=480*layout_m[1])
 print(p3)
 dev.off()
 
+#http://www.magesblog.com/2015/04/combining-several-lattice-charts-into.html
+#test_ p <- c(Busses=pltBusses, Trains=pltTrains, 
+#  y.same=TRUE,layout=c(4,2))
+#c.trellis
+
+p_3a_combined <- c(AGRI=p1, MEAT=p2, LIVESTOCK=p3,layout=c(3,1))#,main="CONSUMPTION")
+#             y.same=FALSE,layout=c(4,2))
+
+png_filename3a <- paste("Figure","_3a_combined_","agri_meat_livectock_flow_directions_A_B_C_",out_suffix,".png", sep="")
+
+layout_m <- c(1.5,1)
+
+## Improve size of the font!!!
+png(png_filename3a,
+    #height=480*layout_m[2],width=480*layout_m[1])
+    height=480*1,width=480*3)
+print(p_3a_combined)
+dev.off()
+
 #############################
-##### Figure 6: consumption A+C
-#Figure 6. Consumption dervied from flow using quantities for the 2001-2009 time period and three type of food products.
+##### Figure 3b: consumption A+C
+#Figure 3b. Consumption dervied from flow using quantities for the 2001-2009 time period and three type of food products.
 #slides 8,9,10
 
 tb_summary3$consumption_val <- as.character(tb_summary3$consumption)
 
 tb_summary3$consumption_cat <- revalue(tb_summary3$consumption_val,
-                                 c("0"  = "outside", 
-                                   "1" = "inside")) 
+                                 c("0"  = "B", 
+                                   "1" = "A + C")) 
 
 ## Local Consumption is A+C (defined as comsumption of from import and locally produced food)
 #this is external produciton of food which is imported (A) or consumed locally (C)
 # B is outflow (outside)
 # A+C is 
 
-p7 <- xyplot(NV_CANT ~ year | consumption_cat,subset(tb_summary3,tb_summary3$product_cat=="agri"),
+p7 <- xyplot(NV_CANT ~ year, groups= consumption_cat,subset(tb_summary3,tb_summary3$product_cat=="agri"),
              type="b",
              ylab="Tons",
-             main="AGRI flow consumption total by year ")
+             main="Flow consumption total by year ")
 
-p8 <- xyplot(NV_CANT ~ year | consumption_cat,subset(tb_summary3,tb_summary3$product_cat=="meat"),
+#p8 <- xyplot(NV_CANT ~ year | consumption_cat,subset(tb_summary3,tb_summary3$product_cat=="meat"),
+#             type="b",
+#             ylab="Tons", 
+#             main="MEAT flow consumption total by year ")
+
+p8 <- xyplot(NV_CANT ~ year, groups= consumption_cat,subset(tb_summary3,tb_summary3$product_cat=="meat"),
              type="b",
              ylab="Tons", 
              main="MEAT flow consumption total by year ")
 
-p9 <- xyplot(NV_CANT ~ year | consumption_cat,subset(tb_summary3,tb_summary3$product_cat=="livestock"),
+p9 <- xyplot(NV_CANT ~ year, groups= consumption_cat,subset(tb_summary3,tb_summary3$product_cat=="livestock"),
              type="b",
              ylab="Head", 
              main="LIVESTOCK flow consumption total by year ")
 
-png_filename6a <- paste("Figure","_6a_","agri_consumption_cat_",out_suffix,".png", sep="")
-png_filename6b <- paste("Figure","_6b_","meat_consumption_cat_",out_suffix,".png", sep="")
-png_filename6c <- paste("Figure","_6c_","livestock_consumption_cat_",out_suffix,".png", sep="")
+png_filename3b1 <- paste("Figure","_3b1_","agri_consumption_cat_",out_suffix,".png", sep="")
+png_filename3b2 <- paste("Figure","_3b2_","meat_consumption_cat_",out_suffix,".png", sep="")
+png_filename3b3 <- paste("Figure","_3b3_","livestock_consumption_cat_",out_suffix,".png", sep="")
 
 layout_m <- c(1.5,1)
 
-png(png_filename6a,
+png(png_filename3b1,
     height=480*layout_m[2],width=480*layout_m[1])
 print(p7)
 dev.off()
 
-png(png_filename6b,
+png(png_filename3b2,
     height=480*layout_m[2],width=480*layout_m[1])
 print(p8)
 dev.off()
 
-png(png_filename6c,
+png(png_filename3b3,
     height=480*layout_m[2],width=480*layout_m[1])
 print(p9)
 dev.off()
 
+#http://www.magesblog.com/2015/04/combining-several-lattice-charts-into.html
+#test_ p <- c(Busses=pltBusses, Trains=pltTrains, 
+#  y.same=TRUE,layout=c(4,2))
+#c.trellis
+
+p_3b_combined <- c(AGRI=p7, MEAT=p8, LIVESTOCK=p9,layout=c(3,1))#,main="CONSUMPTION")
+#             y.same=FALSE,layout=c(4,2))
+
+png_filename3b <- paste("Figure","_3b_combined_","agri_meat_livectock_consumption_cat_",out_suffix,".png", sep="")
+
+layout_m <- c(1.5,1)
+
+## Improve size of the font!!!
+png(png_filename3b,
+    #height=480*layout_m[2],width=480*layout_m[1])
+    height=480*1,width=480*3)
+print(p_3b_combined)
+dev.off()
+
 #############################
-##### Figure 7: Production B+C
+##### Figure 3c: Production B+C
 # Figure 7: Production derived from flow using quantities for the 2001-2009 time period and three type of food products.
 
 #slide 8,9,10
@@ -388,55 +454,100 @@ dev.off()
 tb_summary2$extraction_val <- as.character(tb_summary2$extraction)
 
 tb_summary2$extraction_cat <- revalue(tb_summary2$extraction_val,
-                            c("0"  = "outside", 
-                              "1" = "inside")) 
+                            c("0"  = "A", 
+                              "1" = "B + C")) 
 
-p4 <- xyplot(NV_CANT ~ year | extraction_cat,subset(tb_summary2,tb_summary2$product_cat=="agri"),
+#p4 <- xyplot(NV_CANT ~ year | extraction_cat,subset(tb_summary2,tb_summary2$product_cat=="agri"),
+#             type="b",
+#             ylab="Tons",
+#             main="AGRI flow production total by year ")
+
+p4 <- xyplot(NV_CANT ~ year, groups=extraction_cat,subset(tb_summary2,tb_summary2$product_cat=="agri"),
              type="b",
              ylab="Tons",
              main="AGRI flow production total by year ")
 
-p5 <- xyplot(NV_CANT ~ year | extraction_cat,subset(tb_summary2,tb_summary2$product_cat=="meat"),
+p5 <- xyplot(NV_CANT ~ year, groups=extraction_cat,subset(tb_summary2,tb_summary2$product_cat=="meat"),
              type="b",
              ylab="Tons", 
              main="MEAT flow production total by year ")
 
-p6 <- xyplot(NV_CANT ~ year | extraction_cat,subset(tb_summary2,tb_summary2$product_cat=="livestock"),
+p6 <- xyplot(NV_CANT ~ year, groups=extraction_cat,subset(tb_summary2,tb_summary2$product_cat=="livestock"),
        type="b",
        ylab="Head", 
        main="LIVESTOCK flow production total by year ")
 
-png_filename7a <- paste("Figure","_7a_","agri_production_cat_",out_suffix,".png", sep="")
-png_filename7b <- paste("Figure","_7b_","meat_production_cat_",out_suffix,".png", sep="")
-png_filename7c <- paste("Figure","_7c_","livestock_production_cat_",out_suffix,".png", sep="")
+png_filename3c1 <- paste("Figure","_3c1_","agri_production_cat_",out_suffix,".png", sep="")
+png_filename3c2 <- paste("Figure","_3c2_","meat_production_cat_",out_suffix,".png", sep="")
+png_filename3c3 <- paste("Figure","_3c3_","livestock_production_cat_",out_suffix,".png", sep="")
 
 layout_m <- c(1.5,1)
 
-png(png_filename7a,
+png(png_filename3c1,
     height=480*layout_m[2],width=480*layout_m[1])
 print(p4)
 dev.off()
 
-png(png_filename7b,
+png(png_filename3c2,
     height=480*layout_m[2],width=480*layout_m[1])
 print(p5)
 dev.off()
 
-png(png_filename7c,
+png(png_filename3c3,
     height=480*layout_m[2],width=480*layout_m[1])
 print(p6)
 dev.off()
 
+p_3c_combined <- c(AGRI=p4, MEAT=p5, LIVESTOCK=p6,layout=c(3,1))#,main="CONSUMPTION")
+#             y.same=FALSE,layout=c(4,2))
+
+png_filename3c <- paste("Figure","_3c_combined_","agri_meat_livectock_production_cat_",out_suffix,".png", sep="")
+
+layout_m <- c(1.5,1)
+
+## Improve size of the font!!!
+png(png_filename3c,
+    #height=480*layout_m[2],width=480*layout_m[1])
+    height=480*1,width=480*3)
+print(p_3c_combined)
+dev.off()
+
+###################### combine figure 3 #########
+
+p_3_combined <- c(AGRI=p_3a_combined, MEAT=p_3b_combined, LIVESTOCK=p_3c_combined,layout=c(3,3))#,main="CONSUMPTION")
+#             y.same=FALSE,layout=c(4,2))
+
+png_filename3 <- paste("Figure","_3_combined_","agri_meat_livectock_flows_consumption_production_cat_",out_suffix,".png", sep="")
+
+layout_m <- c(1.5,1)
+
+## Improve size of the font!!!
+png(png_filename3,
+    #height=480*layout_m[2],width=480*layout_m[1])
+    height=480*3,width=480*3)
+print(p_3_combined)
+dev.off()
 
 #############################
-##### Figure 8: Decoupling from distance flow and years
-# Figure 8: Decoupling by year  for Quintana Roo expressed by quantities of flows by distance (Hinterland variable).
-
+##### Figure 4: Decoupling from distance flow and years
+# Figure 4: Decoupling by year  for Quintana Roo expressed by quantities of flows by distance (Hinterland variable).
+#http://stackoverflow.com/questions/17721126/simplest-way-to-do-grouped-barplot
 #slide 17,18,19
 
-png_filename8a <- paste("Figure","_8a_","agri_hinterland_cat_sum_",out_suffix,".png", sep="")
-png_filename8b <- paste("Figure","_8b_","meat_hinterland_cat_sum_",out_suffix,".png", sep="")
-png_filename8c <- paste("Figure","_8c_","livestock_hinterland_cat_sum_",out_suffix,".png", sep="")
+## Add colors to barplots
+options(scipen=999)
+
+p6 <- barchart(NV_CANT ~ year, groups=hinterland_year_tb$labels ,
+               subset(hinterland_year_tb,hinterland_year_tb$product_cat=="livestock"),
+             type="b",
+             ylab="Head", 
+             horizontal=FALSE,
+             xlab = hinterland_year_tb$labels,
+             main="LIVESTOCK flow production total by year ")
+
+png_filename4a <- paste("Figure","_4a_","agri_hinterland_cat_sum_",out_suffix,".png", sep="")
+png_filename4b <- paste("Figure","_4b_","meat_hinterland_cat_sum_",out_suffix,".png", sep="")
+png_filename4c <- paste("Figure","_4c_","livestock_hinterland_cat_sum_",out_suffix,".png", sep="")
 
 hinterland_tb  <- read.table(file.path(inDir,hinterland_by_product_sum_filename),header=T,sep=",") 
 hinterland_year_tb  <- read.table(file.path(inDir,hinterland_year_by_product_sum_filename),header=T,sep=",")
@@ -449,8 +560,11 @@ hinterland_year_tb$flow_dist_hint <- revalue(hinterland_year_tb$flow_dist_cat_va
                            "2" = "MEX", 
                            "3" = "W")) 
 hinterland_year_tb$labels <- paste(hinterland_year_tb$year,hinterland_year_tb$flow_dist_hint)
-  
+hinterland_year_tb <- subset(hinterland_year_tb, hinterland_year_tb$flow_dist_hint!="W")
+
 layout_m <- c(1.5,1)
+
+col_palette <- c("red","blue","darkgreen")
 
 #### Agri hinterland
 
@@ -459,28 +573,47 @@ layout_m <- c(1.5,1)
 hint_tmp <- subset(hinterland_year_tb,hinterland_year_tb$product_cat=="agri")
 x_labels <- hint_tmp$labels
 
-png(png_filename8a,
+l_df <- lapply(unique(hint_tmp$flow_dist_hint),FUN=function(x){subset(hint_tmp,hint_tmp$flow_dist_hint==x)})
+l_heights <- lapply(l_df, FUN=function(x){x$NV_CANT})
+heights <- do.call(cbind , l_heights)
+heights <-as.matrix(t(heights))
+
+png(png_filename4a,
     height=480*layout_m[2],width=480*layout_m[1])
 
-barplot(hint_tmp$NV_CANT,names.arg=x_labels,las=2,
-        main="AGRI flows total quantities by hinterland category")
-
+#barplot(hint_tmp$NV_CANT,names.arg=x_labels,las=2,
+#        main="AGRI flows total quantities by hinterland category")
+barplot(heights,names.arg=x_labels,las=2,
+        main="AGRI flows total quantities by hinterland category",
+        #names.arg=names_ind,
+        cex.names=1.1,   
+        col=col_palette, 
+        beside=TRUE) # see two barplots for comparisons...
 dev.off()
-
 
 #### Meat hinterland
 
-#dates_val <- c(sort(rep(2001:2008,3)),rep(2009,4))
-#x_labels <- paste(dates_val,c(rep(c("QR","GYR","MEX"),8),c("QR","GYR","MEX","W")),sep=" ")
 hint_tmp <- subset(hinterland_year_tb,hinterland_year_tb$product_cat=="meat")
 x_labels <- hint_tmp$labels
 
-png(png_filename8b,
+#hint_tmp
+l_df <- lapply(unique(hint_tmp$flow_dist_hint),FUN=function(x){subset(hint_tmp,hint_tmp$flow_dist_hint==x)})
+l_heights <- lapply(l_df, FUN=function(x){x$NV_CANT})
+heights <- do.call(cbind , l_heights)
+heights <-as.matrix(t(heights))
+
+png(png_filename4b,
     height=480*layout_m[2],width=480*layout_m[1])
 
-barplot(hint_tmp$NV_CANT,names.arg=x_labels,las=2,
-        main="MEAT flows total quantities by hinterland category")
+barplot(heights,names.arg=x_labels,las=2,
+        main="MEAT flows total quantities by hinterland category",
+        #names.arg=names_ind,
+        cex.names=1.1,   
+        col=col_palette, 
+        beside=TRUE) # see two barplots for comparisons...
+
 dev.off()
+
 
 #### Livestock hinterland
 
@@ -489,18 +622,90 @@ dev.off()
 hint_tmp <- subset(hinterland_year_tb,hinterland_year_tb$product_cat=="livestock")
 x_labels <- hint_tmp$labels
 
-png(png_filename8c,
+hint_tmp
+l_df <- lapply(unique(hint_tmp$flow_dist_hint),FUN=function(x){subset(hint_tmp,hint_tmp$flow_dist_hint==x)})
+l_heights <- lapply(l_df, FUN=function(x){x$NV_CANT})
+heights <- do.call(cbind , l_heights)
+heights <-as.matrix(t(heights))
+
+### Make this a function
+
+png(png_filename4c,
     height=480*layout_m[2],width=480*layout_m[1])
-barplot(hint_tmp$NV_CANT,names.arg=x_labels,las=2,
-        main="LIVESTOCK flows total quantities by hinterland category")
+barplot(heights,names.arg=x_labels,las=2,
+        main="LIVESTOCK flows total quantities by hinterland category",
+        #names.arg=names_ind,
+        cex.names=1.1,   
+        col=c("red","blue","darkgreen"), 
+        beside=TRUE) # see two barplots for comparisons...
+dev.off()
+
+#png(png_filename4c,
+#    height=480*layout_m[2],width=480*layout_m[1])
+#barplot(hint_tmp$NV_CANT,names.arg=x_labels,las=2,
+#        main="LIVESTOCK flows total quantities by hinterland category")s
+#dev.off()
+
+######### Figure 5: decoupling: aggregated flows by total numbers and quantities for three products
+# Figure 5: Decoupling of Quintana Roo expressed by total number of flows (top) and total quantities (bottom) by distance (Hinterland variable) for three type of products: agriculture, meat and livestock.
+
+hinterland_tb_quant_trans
+#hinterland_tb_quant_trans$flow_dist_label <- revalue(hinterland_tb_quant_trans$flow_dist_cat,
+#                                                     c("0"  = "QR", # internal consuption: C
+#                                                       "1" = "GYR", # QR->GYR outflow: B
+#                                                       "2" = "MEX")) # g) QR-<W: A (inflow) and W->QR
+
+x_label <- c("QR","GYR","MEX")
+
+
+hinterland_tb_quant <- aggregate(NV_CANT ~ flow_dist_cat + product_cat ,data=hinterland_tb_quant_trans,sum)
+hinterland_tb_trans <- aggregate(transaction_bool ~ flow_dist_cat + product_cat ,data=hinterland_tb_quant_trans,sum)
+
+
+### Now plot the figures
+png_filename5_bottom <- paste("Figure","_5_bottom_","agri_hinterland_cat_sum_",out_suffix,".png", sep="")
+### Now plot the figures
+png_filename5_top <- paste("Figure","_5_top_","agri_hinterland_cat_sum_",out_suffix,".png", sep="")
+
+res_pix<-480*0.9
+col_mfrow<- 3
+row_mfrow<- 1
+m <- rbind(c(1, 3))
+#print(m)
+
+png(filename=png_filename5_bottom,
+    width=col_mfrow*res_pix,height=row_mfrow*res_pix)
+
+par(mfrow=c(row_mfrow,col_mfrow))
+
+hinterland_tb_tmp <- subset(hinterland_tb_quant,product_cat=="agri")
+barplot(hinterland_tb_tmp$NV_CANT,main="AGRI volumes",names.arg=x_label,cex.axis=1.1,cex.lab=1.3,ylab="Tons")
+
+hinterland_tb_tmp <- subset(hinterland_tb_quant,product_cat=="meat")
+barplot(hinterland_tb_tmp$NV_CANT,main="MEAT volumes",names.arg=x_label,cex.axis=1.1,cex.lab=1.3,ylab="Tons")
+
+hinterland_tb_tmp <- subset(hinterland_tb_quant,product_cat=="livestock")
+barplot(hinterland_tb_tmp$NV_CANT,main="LIVESTOCK volumes",names.arg=x_label,cex.axis=1.1,cex.lab=1.3,ylab="Heads")
 
 dev.off()
 
-######### Figure 9: decoupling: aggregated flows by total numbers and quantities for three products
-# Figure 9: Decoupling of Quintana Roo expressed by total number of flows (top) and total quantities (bottom) by distance (Hinterland variable) for three type of products: agriculture, meat and livestock.
+png(filename=png_filename5_top,
+    width=col_mfrow*res_pix,height=row_mfrow*res_pix)
 
+par(mfrow=c(row_mfrow,col_mfrow))
 
-######### Figure 10:
+hinterland_tb_tmp <- subset(hinterland_tb_trans,product_cat=="agri")
+barplot(hinterland_tb_tmp$transaction_bool,main="AGRI transactions",names.arg=x_label,cex.axis=1.1,cex.lab=1.3,ylab="Number of transactions")
+
+hinterland_tb_tmp <- subset(hinterland_tb_trans,product_cat=="meat")
+barplot(hinterland_tb_tmp$transaction_bool,main="MEAT transactions",names.arg=x_label,cex.axis=1.1,cex.lab=1.3,ylab="Number of transactions")
+
+hinterland_tb_tmp <- subset(hinterland_tb_trans,product_cat=="livestock")
+barplot(hinterland_tb_tmp$transaction_bool,main="LIVESTOCK transactions",names.arg=x_label,cex.axis=1.1,cex.lab=1.3,ylab="Number of transactions")
+
+dev.off()
+
+######### Figure 6: Total land consumption for crop and livestock
 
 #tb_land_agri$total_land_consumed <- total_land_consumed_qr
 
@@ -514,12 +719,12 @@ tb_land_summarized_livestock_filename <- paste("tb_land_summarized_","livestock"
 tb_land_summarized2_A_B_C_livestock_filename <- paste("tb_land_summarized2_","livestock","_by_flow_A_B_C_year",out_suffix,".txt",sep="")
 tb_land_livestock_filename <- paste("tb_land_","livestock", out_suffix,".txt",sep="")
 
-png_filename10a <- paste("Figure","_10a_","agri_total_percent_land_consumption_by_year",out_suffix,".png", sep="")
-png_filename10c <- paste("Figure","_10c_","livestock_total_percent_land_consumption_by_year",out_suffix,".png", sep="")
+png_filename6a <- paste("Figure","_6a_","agri_total_percent_land_consumption_by_year",out_suffix,".png", sep="")
+png_filename6c <- paste("Figure","_6c_","livestock_total_percent_land_consumption_by_year",out_suffix,".png", sep="")
 
 layout_m <- c(1.5,1)
 
-png(png_filename10a,
+png(png_filename6a,
     height=480*layout_m[2],width=480*layout_m[1])
 
 plot(percent_land_consumption ~ year,data=tb_land_summarized_agri ,type="b",
@@ -528,7 +733,7 @@ plot(percent_land_consumption ~ year,data=tb_land_summarized_agri ,type="b",
 
 dev.off()
 
-png(png_filename10c,
+png(png_filename6c,
     height=480*layout_m[2],width=480*layout_m[1])
 
 plot(percent_land_consumption ~year,data=tb_land_summarized_livestock,type="b",
@@ -537,48 +742,8 @@ plot(percent_land_consumption ~year,data=tb_land_summarized_livestock,type="b",
 
 dev.off()
 
-######### Figure 11:
-
-#Figure 11. Flow conversions (A:inflow, B:outflows, C=internal flow) converted into land consumption expressed by percentage of landscape converted for crop and cattle activities aggregated by year.
-
-#plot(tb_summarized$land_consumption ~year,data=tb_summarized,type="b",main="crop")
-
-tb_land_summarized2_agri <- aggregate(percent_land_consumption ~ flow_direction + year, data =  tb_land_agri, sum)
-
-p10 <- xyplot(percent_land_consumption ~ year | flow_direction ,data=tb_land_summarized2_agri,
-             type="b",
-             ylab="% of land in QR", 
-             main="AGRI land consumption as percentage of land")
-
-#p10
-
-
-tb_land_summarized2_livestock <- aggregate(percent_land_consumption ~ flow_direction + year, data = tb_land_livestock, sum)
-
-p11 <- xyplot(percent_land_consumption ~ year | flow_direction ,data=tb_land_summarized2_livestock,
-             type="b",
-             ylab="% of land in QR", 
-             main="Livestock land consumption as percentage of land")
-
-#p11
-
-png_filename11a <- paste("Figure","_11a_","agri_total_percent_land_consumption_A_B_C_by_year",out_suffix,".png", sep="")
-#png_filename7b <- paste("Figure","_7b_","meat_production_cat_",out_suffix,".png", sep="")
-png_filename11c <- paste("Figure","_11c_","livestock_total_percent_land_consumption_A_B_C_by_year",out_suffix,".png", sep="")
-
-layout_m <- c(1.5,1)
-
-png(png_filename11a,
-    height=480*layout_m[2],width=480*layout_m[1])
-print(p10)
-dev.off()
-
-png(png_filename11c,
-    height=480*layout_m[2],width=480*layout_m[1])
-print(p11)
-dev.off()
-
-#Figure 12: combine agri and livestock
+#################
+####Figure 7: combine agri and livestock land consumption
 
 tb_land_summarized_livestock$percent_land_consumption
 tb_land_summarized_agri$percent_land_consumption
@@ -593,9 +758,9 @@ tb_land_summarized_combined$percent_land_consumption_total <- tb_land_summarized
 out_filename <- file.path(inDir,paste("tb_land_consumption_summarized_",out_suffix,".txt",sep=""))
 write.table(tb_land_summarized_combined,file= out_filename,sep=",")
 
-png_filename12 <- paste("Figure","_12_","combined_total_percent_land_consumption_year",out_suffix,".png", sep="")
+png_filename7 <- paste("Figure","_7_","combined_total_percent_land_consumption_year",out_suffix,".png", sep="")
 
-png(png_filename12,
+png(png_filename7,
     height=480*layout_m[2],width=480*layout_m[1])
 
 plot(percent_land_consumption_total ~ year,data=tb_land_summarized_combined ,type="b",
@@ -606,6 +771,52 @@ plot(percent_land_consumption_total ~ year,data=tb_land_summarized_combined ,typ
 abline(h=100,col=4,lty=2)
 
 dev.off()
+
+#########################################
+######## Supplementary Figure #######
+
+#####################
+######### Figure s1:
+
+#Figure s1. Flow conversions (A:inflow, B:outflows, C=internal flow) converted into land consumption expressed by percentage of landscape converted for crop and cattle activities aggregated by year.
+
+#plot(tb_summarized$land_consumption ~year,data=tb_summarized,type="b",main="crop")
+
+tb_land_summarized2_agri <- aggregate(percent_land_consumption ~ flow_direction + year, data =  tb_land_agri, sum)
+
+p10 <- xyplot(percent_land_consumption ~ year | flow_direction ,data=tb_land_summarized2_agri,
+              type="b",
+              ylab="% of land in QR", 
+              main="AGRI land consumption as percentage of land")
+
+#p10
+
+
+tb_land_summarized2_livestock <- aggregate(percent_land_consumption ~ flow_direction + year, data = tb_land_livestock, sum)
+
+p11 <- xyplot(percent_land_consumption ~ year | flow_direction ,data=tb_land_summarized2_livestock,
+              type="b",
+              ylab="% of land in QR", 
+              main="Livestock land consumption as percentage of land")
+
+#p11
+
+png_filename_s1a <- paste("Figure","_s1a_","agri_total_percent_land_consumption_A_B_C_by_year",out_suffix,".png", sep="")
+#png_filename7b <- paste("Figure","_7b_","meat_production_cat_",out_suffix,".png", sep="")
+png_filename_s1c <- paste("Figure","_s1c_","livestock_total_percent_land_consumption_A_B_C_by_year",out_suffix,".png", sep="")
+
+layout_m <- c(1.5,1)
+
+png(png_filename_s1a,
+    height=480*layout_m[2],width=480*layout_m[1])
+print(p10)
+dev.off()
+
+png(png_filename_s1c,
+    height=480*layout_m[2],width=480*layout_m[1])
+print(p11)
+dev.off()
+
 
 ################## END OF SCRIPT #####################
 
