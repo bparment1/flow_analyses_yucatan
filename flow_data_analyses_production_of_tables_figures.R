@@ -5,15 +5,17 @@
 #
 #AUTHOR: Benoit Parmentier                                                                       
 #DATE CREATED:08/30/2016 
-#DATE MODIFIED: 10/13/2016
+#DATE MODIFIED: 10/14/2016
 #
 #PROJECT: Flow and land cover change in QR and GYR with Marco Millones
-#COMMIT: generating figure 9 related to hinterland in the production script
+#COMMIT: debuggin function for barplots figures and moving it to function script
 
 ## Code used in the current workflow:
 #flow_data_analyses_10132016.R : this generates cleaned table of flows and data table used in analyses and figures
-#flow_data_analyses_production_of_tables_figures_10132016.R: figure and table creation
 #flow_data_analyses_function_09162016.R: function script used in analyses and figures
+#flow_data_analyses_production_of_tables_figures_10142016.R: figures and tables creation
+#flow_data_analyses_production_of_tables_figures_functions_10142016.R: functions figures and tables 
+#
 
 ##################################################################################################
 
@@ -70,46 +72,11 @@ library(plyr)
 #################################################
 ###### Functions  used in the script  ##########
 
-create_dir_fun <- function(outDir,out_suffix){
-  #if out_suffix is not null then append out_suffix string
-  if(!is.null(out_suffix)){
-    out_name <- paste("output_",out_suffix,sep="")
-    outDir <- file.path(outDir,out_name)
-  }
-  #create if does not exists
-  if(!file.exists(outDir)){
-    dir.create(outDir)
-  }
-  return(outDir)
-}
+script_dir <- "/home/bparmentier/Google Drive/000_Flow_and_LUD_research/Quintana_Roo_Research/scripts"
+infile1_function <- "flow_data_analyses_production_of_tables_figures_functions_10142016.R"
 
-load_obj <- function(f){
-  env <- new.env()
-  nm <- load(f, env)[1]
-  env[[nm]]
-}
-
-format_column_for_table <- function(col_val,name_col=NULL){
-  
-  col_tot <- sum(col_val)
-  col_prop <-  100*(col_val/col_tot)
-  col_prop      <- format(round(col_prop, 2), nsmall = 2)
-  element <-paste(col_val," (",col_prop,")",sep="")
-  col_formatted <- c(element,col_tot)
-  #col_formatted <- cbind(element,col_tot)
-  #col_formatted <- cbind(element)
-  
-  if(is.null(name_col)){
-    name_col <- "col"
-  }
-  df <- data.frame(name_col=col_formatted)
-  names(df)<- name_col #make sure the name is assigned
-  return(df)
-}
-
-#infile1_function <- file.path("/home/bparmentier/Google Drive/Papers_writing_MEOT/R_scripts/",
-#                              "PCA_EOT_comparison_data_update_function_07152016.R")
-#source(infile1_function)
+infile1_function <- file.path(script_dir,infile1_function)
+source(infile1_function)
 
 #############################################
 ######## Parameters and arguments  ########
@@ -227,6 +194,8 @@ tb_land_livestock <- read.table(file.path(inDir,tb_land_livestock_filename),head
 #################################
 ############## Part 0: Generate table ################
 
+options(scipen=999) #don't use scientific notation
+
 ##########
 ### Generate table 4
 #Table 4. Total count  of flow transaction by type all years aggregated. Include flows by type AG, LIVE, MEAT, by trans units and % total of each type
@@ -291,7 +260,7 @@ write.table(df_table5,file=table5_filename,sep=",")
 #Figure 7: Combined total percent land consumption year for both crop and cattle
 
 #Supplementary material
-#Figure 11: Flow conversions (A:inflow, B:outflows, C:internal flow) converted into land consumption expressed by percentage of landscape converted for crop and cattle activities aggregated by year.
+#Figure s1: Flow conversions (A:inflow, B:outflows, C:internal flow) converted into land consumption expressed by percentage of landscape converted for crop and cattle activities aggregated by year.
 
 #########
 ##### Figure 3: Flows quantities and import, export and internal flows.
@@ -535,7 +504,7 @@ dev.off()
 #slide 17,18,19
 
 ## Add colors to barplots
-options(scipen=999)
+#options(scipen=999)
 
 p6 <- barchart(NV_CANT ~ year, groups=hinterland_year_tb$labels ,
                subset(hinterland_year_tb,hinterland_year_tb$product_cat=="livestock"),
@@ -640,11 +609,50 @@ barplot(heights,names.arg=x_labels,las=2,
         beside=TRUE) # see two barplots for comparisons...
 dev.off()
 
-#png(png_filename4c,
-#    height=480*layout_m[2],width=480*layout_m[1])
-#barplot(hint_tmp$NV_CANT,names.arg=x_labels,las=2,
-#        main="LIVESTOCK flows total quantities by hinterland category")s
-#dev.off()
+##### Use function to generate barplot
+
+options(scipen=999)
+layout_m <- c(1.5,1)
+
+col_palette <- c("red","blue","darkgreen")
+
+#### Agri hinterland
+
+#dates_val <- hinterland_year_tb$labels
+
+product_cat_val <- "agri"
+title_str <- "AGRI flows total quantities by hinterland category"
+hint_tmp <- subset(hinterland_year_tb,hinterland_year_tb$product_cat=="livestock")
+x_labels <- hint_tmp$labels
+png_filename4a <- paste("Figure","_4a_","agri_hinterland_cat_sum_",out_suffix,".png", sep="")
+#png_filename4b <- paste("Figure","_4b_","meat_hinterland_cat_sum_",out_suffix,".png", sep="")
+#png_filename4c <- paste("Figure","_4c_","livestock_hinterland_cat_sum_",out_suffix,".png", sep="")
+
+out_barplot_png <- generate_barplot_flows(df_tb=hinterland_year_tb,
+                                           x_labels=x_labels,
+                                           col_palette=col_palette,
+                                           layout_m=layout_m,
+                                           product_cat_val=product_cat_val,
+                                           title_str=title_str,
+                                           out_filename=png_filename4a)
+#### Now meat
+
+product_cat_val <- "meat"
+title_str <- "MEAT flows total quantities by hinterland category"
+hint_tmp <- subset(hinterland_year_tb,hinterland_year_tb$product_cat=="livestock")
+x_labels <- hint_tmp$labels
+png_filename4b <- paste("Figure","_4b_","meat_hinterland_cat_sum_",out_suffix,".png", sep="")
+
+
+out_barplot_png <- generate_barplot_flows(df_tb=hinterland_year_tb,
+                                          x_labels=x_labels,
+                                          col_palette=col_palette,
+                                          layout_m=layout_m,
+                                          product_cat_val=product_cat_val,
+                                          title_str=title_str,
+                                          out_filename=png_filename4a)
+
+
 
 ######### Figure 5: decoupling: aggregated flows by total numbers and quantities for three products
 # Figure 5: Decoupling of Quintana Roo expressed by total number of flows (top) and total quantities (bottom) by distance (Hinterland variable) for three type of products: agriculture, meat and livestock.
