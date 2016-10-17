@@ -5,7 +5,7 @@
 #
 #AUTHOR: Benoit Parmentier                                                                       
 #DATE CREATED:08/30/2016 
-#DATE MODIFIED: 10/14/2016
+#DATE MODIFIED: 10/17/2016
 #
 #PROJECT: Flow and land cover change in QR and GYR with Marco Millones
 #COMMIT: debuggin function for barplots figures and moving it to function script
@@ -73,7 +73,7 @@ library(plyr)
 ###### Functions  used in the script  ##########
 
 script_dir <- "/home/bparmentier/Google Drive/000_Flow_and_LUD_research/Quintana_Roo_Research/scripts"
-infile1_function <- "flow_data_analyses_production_of_tables_figures_functions_10142016.R"
+infile1_function <- "flow_data_analyses_production_of_tables_figures_functions_10172016.R"
 
 infile1_function <- file.path(script_dir,infile1_function)
 source(infile1_function)
@@ -279,11 +279,11 @@ p1 <- xyplot(NV_CANT ~ year ,groups=flow_direction,subset(tb_summary1,tb_summary
              main=title_str)
 
 ##This combines everything but can't see the differences within the categories
-p1_test <- xyplot(NV_CANT ~ year| product_cat ,groups=flow_direction,tb_summary1,
-                  #y.same=FALSE, option only use for as.layer and c.trellis
-             type="b",
-            ylab="Tons",
-             main="AGRI flows total by year ")
+#p1_test <- xyplot(NV_CANT ~ year| product_cat ,groups=flow_direction,tb_summary1,
+#                  #y.same=FALSE, option only use for as.layer and c.trellis
+#             type="b",
+#            ylab="Tons",
+#             main="AGRI flows total by year ")
 
 #xyplot(y~x, groups=z, df)
 
@@ -430,21 +430,47 @@ tb_summary2$extraction_cat <- revalue(tb_summary2$extraction_val,
 #             type="b",
 #             ylab="Tons",
 #             main="AGRI flow production total by year ")
+#xyplot(mpg~disp, data=mtcars, 
+#       scales=list(tck=c(1,0), x=list(cex=1.2), y=list(cex=1.5)))
 
+#p4 <- xyplot(NV_CANT ~ year, groups=extraction_cat,subset(tb_summary2,tb_summary2$product_cat=="agri"),
+#             pch=1:2,pch.cex=3,
+#             auto.key=list(columns=1,space="right",title="Method",cex=1.2,font=2), #Legend information
+#             type="b",
+#             ylab="Tons",
+#             main="AGRI flow production total by year ")
+
+#corner=c(0,1)
+
+### Make this a function later
 p4 <- xyplot(NV_CANT ~ year, groups=extraction_cat,subset(tb_summary2,tb_summary2$product_cat=="agri"),
+             pch=1:2,pch.cex=3,
+             auto.key=list(columns=1,corner=c(0,1),cex=1.2,font=2), #Legend information
              type="b",
-             ylab="Tons",
-             main="AGRI flow production total by year ")
+             ylab=list(label="Tons", cex=2, font=2),
+             xlab=list(label="year", cex=2,font=2),
+             main=list("AGRI flow production total by year ",cex=2),
+             scales=list(x=list(cex=1.5), y=list(cex=1.5)))
 
 p5 <- xyplot(NV_CANT ~ year, groups=extraction_cat,subset(tb_summary2,tb_summary2$product_cat=="meat"),
+             pch=1:2,pch.cex=3,
+             auto.key=list(columns=1,corner=c(0,1),cex=1.2,font=2), #Legend information
              type="b",
-             ylab="Tons", 
-             main="MEAT flow production total by year ")
+             ylab=list(label="Tons", cex=2, font=2),
+             xlab=list(label="year", cex=2,font=2),
+             main=list("MEAT flow production total by year ",cex=2),
+             scales=list(x=list(cex=1.5), y=list(cex=1.5)))
 
 p6 <- xyplot(NV_CANT ~ year, groups=extraction_cat,subset(tb_summary2,tb_summary2$product_cat=="livestock"),
+       #main="LIVESTOCK flow production total by year ")
+       pch=1:2,pch.cex=3,
+       auto.key=list(columns=1,corner=c(0,1),cex=1.2,font=2), #Legend information
        type="b",
-       ylab="Head", 
-       main="LIVESTOCK flow production total by year ")
+       ylab=list(label="Head", cex=2, font=2),
+       xlab=list(label="year", cex=2,font=2),
+       main=list("LIVESTOCK flow production total by year ",cex=2),
+       scales=list(x=list(cex=1.5), y=list(cex=1.5)))
+
 
 png_filename3c1 <- paste("Figure","_3c1_","agri_production_cat_",out_suffix,".png", sep="")
 png_filename3c2 <- paste("Figure","_3c2_","meat_production_cat_",out_suffix,".png", sep="")
