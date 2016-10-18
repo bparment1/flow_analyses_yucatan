@@ -5,7 +5,7 @@
 #
 #AUTHOR: Benoit Parmentier                                                                       
 #DATE CREATED:10/14/2016 
-#DATE MODIFIED: 10/14/2016
+#DATE MODIFIED: 10/17/2016
 #
 #PROJECT: Flow and land cover change in QR and GYR with Marco Millones
 #COMMIT: generating figure 9 related to hinterland in the production script
