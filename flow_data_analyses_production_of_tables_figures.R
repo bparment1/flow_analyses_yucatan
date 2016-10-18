@@ -5,10 +5,10 @@
 #
 #AUTHOR: Benoit Parmentier                                                                       
 #DATE CREATED:08/30/2016 
-#DATE MODIFIED: 10/17/2016
+#DATE MODIFIED: 10/18/2016
 #
 #PROJECT: Flow and land cover change in QR and GYR with Marco Millones
-#COMMIT: debuggin function for barplots figures and moving it to function script
+#COMMIT: changing xyplot for consumption, production and total flow figures combined
 
 ## Code used in the current workflow:
 #flow_data_analyses_10132016.R : this generates cleaned table of flows and data table used in analyses and figures
@@ -271,12 +271,12 @@ write.table(df_table5,file=table5_filename,sep=",")
 #             type="b",
 #             ylab="Tons",
 #             main="AGRI flows total by year ")
-title_str <- "Flows total by year" # use this title because it is the one used in the combined plot!! (first plot)
+#title_str <- "Flows total by year" # use this title because it is the one used in the combined plot!! (first plot)
 
-p1 <- xyplot(NV_CANT ~ year ,groups=flow_direction,subset(tb_summary1,tb_summary1$product_cat=="agri"),
-             type="b",
-             ylab="Tons",
-             main=title_str)
+#p1 <- xyplot(NV_CANT ~ year ,groups=flow_direction,subset(tb_summary1,tb_summary1$product_cat=="agri"),
+#             type="b",
+#             ylab="Tons",
+#             main=title_str)
 
 ##This combines everything but can't see the differences within the categories
 #p1_test <- xyplot(NV_CANT ~ year| product_cat ,groups=flow_direction,tb_summary1,
@@ -287,16 +287,33 @@ p1 <- xyplot(NV_CANT ~ year ,groups=flow_direction,subset(tb_summary1,tb_summary
 
 #xyplot(y~x, groups=z, df)
 
-p2 <- xyplot(NV_CANT ~ year, groups= flow_direction,subset(tb_summary1,tb_summary1$product_cat=="meat"),
-             type="b",
-             ylab="Tons",
-             main="MEAT flows total by year ")
+list_names_cat <- c("agri","meat","livestock")
+list_title_str <- c("AGRI flows total by year ",
+                    "MEAT flows total by year ",
+                    "LIVESTOCK flows total by year ")
+list_y_lab <- c("Tons","Tons","Head")
 
-p3 <- xyplot(NV_CANT ~ year, groups = flow_direction,subset(tb_summary1,tb_summary1$product_cat=="livestock"),
-       type="b",
-       #type="h",
-       ylab="Head", 
-       main="LIVESTOCK flows total by year ")
+list_plot_flow_direction <- vector("list",length=length(list_names_cat))
+df_table <- tb_summary1
+
+for(i in 1:length(list_names_cat)){
+  
+  names_cat <- list_names_cat[i]
+  title_str <- list_title_str[i]
+  y_lab <- list_y_lab[i]
+  
+  p_plot <- xyplot(NV_CANT ~ year, groups=flow_direction,subset(df_table,product_cat==names_cat),
+                   pch=1:2,pch.cex=3,
+                   auto.key=list(columns=1,corner=c(1,0),cex=1.2,font=2), #Legend information
+                   type="b",
+                   ylab=list(label=y_lab, cex=2, font=2),
+                   xlab=list(label="year", cex=2,font=2),
+                   main=list(title_str,cex=2),
+                   scales=list(x=list(cex=1.5), y=list(cex=1.5)))
+  
+  list_plot_flow_direction[[i]] <- p_plot
+  
+}
 
 png_filename3a1 <- paste("Figure","_3a1_","agri_flow_directions_",out_suffix,".png", sep="")
 png_filename3a2 <- paste("Figure","_3a2_","meat_flow_directions_",out_suffix,".png", sep="")
@@ -306,17 +323,17 @@ layout_m <- c(1.5,1)
 
 png(png_filename3a1,
     height=480*layout_m[2],width=480*layout_m[1])
-print(p1)
+print(list_plot_flow_direction[[1]])
 dev.off()
 
 png(png_filename3a2,
     height=480*layout_m[2],width=480*layout_m[1])
-print(p2)
+print(list_plot_flow_direction[[2]])
 dev.off()
 
 png(png_filename3a3,
     height=480*layout_m[2],width=480*layout_m[1])
-print(p3)
+print(list_plot_flow_direction[[3]])
 dev.off()
 
 #http://www.magesblog.com/2015/04/combining-several-lattice-charts-into.html
@@ -324,7 +341,7 @@ dev.off()
 #  y.same=TRUE,layout=c(4,2))
 #c.trellis
 
-p_3a_combined <- c(AGRI=p1, MEAT=p2, LIVESTOCK=p3,layout=c(3,1))#,main="CONSUMPTION")
+p_3a_combined <- c(AGRI=list_plot_flow_direction[[1]], MEAT=list_plot_flow_direction[[2]], LIVESTOCK=list_plot_flow_direction[[3]],layout=c(3,1))#,main="CONSUMPTION")
 #             y.same=FALSE,layout=c(4,2))
 
 png_filename3a <- paste("Figure","_3a_combined_","agri_meat_livectock_flow_directions_A_B_C_",out_suffix,".png", sep="")
@@ -354,25 +371,33 @@ tb_summary3$consumption_cat <- revalue(tb_summary3$consumption_val,
 # B is outflow (outside)
 # A+C is 
 
-p7 <- xyplot(NV_CANT ~ year, groups= consumption_cat,subset(tb_summary3,tb_summary3$product_cat=="agri"),
-             type="b",
-             ylab="Tons",
-             main="Flow consumption total by year ")
+list_names_cat <- c("agri","meat","livestock")
+list_title_str <- c("AGRI flow consumption total by year ",
+                    "MEAT flow consumption total by year ",
+                    "LIVESTOCK flow production total by year ")
+list_y_lab <- c("Tons","Tons","Head")
 
-#p8 <- xyplot(NV_CANT ~ year | consumption_cat,subset(tb_summary3,tb_summary3$product_cat=="meat"),
-#             type="b",
-#             ylab="Tons", 
-#             main="MEAT flow consumption total by year ")
+list_plot_consumption <- vector("list",length=length(list_names_cat))
+df_table <- tb_summary3
 
-p8 <- xyplot(NV_CANT ~ year, groups= consumption_cat,subset(tb_summary3,tb_summary3$product_cat=="meat"),
-             type="b",
-             ylab="Tons", 
-             main="MEAT flow consumption total by year ")
-
-p9 <- xyplot(NV_CANT ~ year, groups= consumption_cat,subset(tb_summary3,tb_summary3$product_cat=="livestock"),
-             type="b",
-             ylab="Head", 
-             main="LIVESTOCK flow consumption total by year ")
+for(i in 1:length(list_names_cat)){
+  
+  names_cat <- list_names_cat[i]
+  title_str <- list_title_str[i]
+  y_lab <- list_y_lab[i]
+  
+  p_plot <- xyplot(NV_CANT ~ year, groups=consumption_cat,subset(df_table,product_cat==names_cat),
+                   pch=1:2,pch.cex=3,
+                   auto.key=list(columns=1,corner=c(1,0),cex=1.2,font=2), #Legend information
+                   type="b",
+                   ylab=list(label=y_lab, cex=2, font=2),
+                   xlab=list(label="year", cex=2,font=2),
+                   main=list(title_str,cex=2),
+                   scales=list(x=list(cex=1.5), y=list(cex=1.5)))
+  
+  list_plot_consumption[[i]] <- p_plot
+  
+}
 
 png_filename3b1 <- paste("Figure","_3b1_","agri_consumption_cat_",out_suffix,".png", sep="")
 png_filename3b2 <- paste("Figure","_3b2_","meat_consumption_cat_",out_suffix,".png", sep="")
@@ -382,17 +407,17 @@ layout_m <- c(1.5,1)
 
 png(png_filename3b1,
     height=480*layout_m[2],width=480*layout_m[1])
-print(p7)
+print( list_plot_consumption[[1]])
 dev.off()
 
 png(png_filename3b2,
     height=480*layout_m[2],width=480*layout_m[1])
-print(p8)
+print( list_plot_consumption[[2]])
 dev.off()
 
 png(png_filename3b3,
     height=480*layout_m[2],width=480*layout_m[1])
-print(p9)
+print( list_plot_consumption[[3]])
 dev.off()
 
 #http://www.magesblog.com/2015/04/combining-several-lattice-charts-into.html
@@ -400,7 +425,7 @@ dev.off()
 #  y.same=TRUE,layout=c(4,2))
 #c.trellis
 
-p_3b_combined <- c(AGRI=p7, MEAT=p8, LIVESTOCK=p9,layout=c(3,1))#,main="CONSUMPTION")
+p_3b_combined <- c(AGRI= list_plot_consumption[[1]], MEAT= list_plot_consumption[[2]], LIVESTOCK= list_plot_consumption[[3]],layout=c(3,1))#,main="CONSUMPTION")
 #             y.same=FALSE,layout=c(4,2))
 
 png_filename3b <- paste("Figure","_3b_combined_","agri_meat_livectock_consumption_cat_",out_suffix,".png", sep="")
@@ -426,51 +451,34 @@ tb_summary2$extraction_cat <- revalue(tb_summary2$extraction_val,
                             c("0"  = "A", 
                               "1" = "B + C")) 
 
-#p4 <- xyplot(NV_CANT ~ year | extraction_cat,subset(tb_summary2,tb_summary2$product_cat=="agri"),
-#             type="b",
-#             ylab="Tons",
-#             main="AGRI flow production total by year ")
-#xyplot(mpg~disp, data=mtcars, 
-#       scales=list(tck=c(1,0), x=list(cex=1.2), y=list(cex=1.5)))
-
-#p4 <- xyplot(NV_CANT ~ year, groups=extraction_cat,subset(tb_summary2,tb_summary2$product_cat=="agri"),
-#             pch=1:2,pch.cex=3,
-#             auto.key=list(columns=1,space="right",title="Method",cex=1.2,font=2), #Legend information
-#             type="b",
-#             ylab="Tons",
-#             main="AGRI flow production total by year ")
-
-#corner=c(0,1)
-
 ### Make this a function later
-p4 <- xyplot(NV_CANT ~ year, groups=extraction_cat,subset(tb_summary2,tb_summary2$product_cat=="agri"),
-             pch=1:2,pch.cex=3,
-             auto.key=list(columns=1,corner=c(0,1),cex=1.2,font=2), #Legend information
-             type="b",
-             ylab=list(label="Tons", cex=2, font=2),
-             xlab=list(label="year", cex=2,font=2),
-             main=list("AGRI flow production total by year ",cex=2),
-             scales=list(x=list(cex=1.5), y=list(cex=1.5)))
+list_names_cat <- c("agri","meat","livestock")
+list_title_str <- c("AGRI flow production total by year ",
+                    "MEAT flow production total by year ",
+                    "LIVESTOCK flow production total by year ")
+list_y_lab <- c("Tons","Tons","Head")
+  
+list_plot_production <- vector("list",length=length(list_names_cat))
 
-p5 <- xyplot(NV_CANT ~ year, groups=extraction_cat,subset(tb_summary2,tb_summary2$product_cat=="meat"),
-             pch=1:2,pch.cex=3,
-             auto.key=list(columns=1,corner=c(0,1),cex=1.2,font=2), #Legend information
-             type="b",
-             ylab=list(label="Tons", cex=2, font=2),
-             xlab=list(label="year", cex=2,font=2),
-             main=list("MEAT flow production total by year ",cex=2),
-             scales=list(x=list(cex=1.5), y=list(cex=1.5)))
-
-p6 <- xyplot(NV_CANT ~ year, groups=extraction_cat,subset(tb_summary2,tb_summary2$product_cat=="livestock"),
-       #main="LIVESTOCK flow production total by year ")
-       pch=1:2,pch.cex=3,
-       auto.key=list(columns=1,corner=c(0,1),cex=1.2,font=2), #Legend information
-       type="b",
-       ylab=list(label="Head", cex=2, font=2),
-       xlab=list(label="year", cex=2,font=2),
-       main=list("LIVESTOCK flow production total by year ",cex=2),
-       scales=list(x=list(cex=1.5), y=list(cex=1.5)))
-
+for(i in 1:length(list_names_cat)){
+  
+  names_cat <- list_names_cat[i]
+  title_str <- list_title_str[i]
+  y_lab <- list_y_lab[i]
+  
+  p_plot <- xyplot(NV_CANT ~ year, groups=extraction_cat,subset(tb_summary2,tb_summary2$product_cat==names_cat),
+               pch=1:2,pch.cex=3,
+               auto.key=list(columns=1,corner=c(1,0),cex=1.2,font=2), #Legend information
+               type="b",
+               ylab=list(label=y_lab, cex=2, font=2),
+               xlab=list(label="year", cex=2,font=2),
+               main=list(title_str,cex=2),
+               scales=list(x=list(cex=1.5), y=list(cex=1.5)))
+  
+  list_plot_production[[i]] <- p_plot
+  
+}
+    
 
 png_filename3c1 <- paste("Figure","_3c1_","agri_production_cat_",out_suffix,".png", sep="")
 png_filename3c2 <- paste("Figure","_3c2_","meat_production_cat_",out_suffix,".png", sep="")
@@ -480,20 +488,20 @@ layout_m <- c(1.5,1)
 
 png(png_filename3c1,
     height=480*layout_m[2],width=480*layout_m[1])
-print(p4)
+print(list_plot_production[[1]])
 dev.off()
 
 png(png_filename3c2,
     height=480*layout_m[2],width=480*layout_m[1])
-print(p5)
+print(list_plot_production[[2]])
 dev.off()
 
 png(png_filename3c3,
     height=480*layout_m[2],width=480*layout_m[1])
-print(p6)
+print(list_plot_production[[3]])
 dev.off()
 
-p_3c_combined <- c(AGRI=p4, MEAT=p5, LIVESTOCK=p6,layout=c(3,1))#,main="CONSUMPTION")
+p_3c_combined <- c(AGRI=list_plot_production[[1]], MEAT=list_plot_production[[2]], LIVESTOCK=list_plot_production[[3]],layout=c(3,1))#,main="CONSUMPTION")
 #             y.same=FALSE,layout=c(4,2))
 
 png_filename3c <- paste("Figure","_3c_combined_","agri_meat_livectock_production_cat_",out_suffix,".png", sep="")
