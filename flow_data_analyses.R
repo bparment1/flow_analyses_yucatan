@@ -5,16 +5,19 @@
 #
 #AUTHOR: Benoit Parmentier                                                                       
 #DATE CREATED:07/11/2016 
-#DATE MODIFIED: 10/18/2016
+#DATE MODIFIED: 10/19/2016
 #
 #PROJECT: Flow, land cover change with Marco Millones
-#COMMIT: generating new data for the revisions 1 of flow paper
+#COMMIT: generating data with updated conversion and meat conversion factor
 #
 
 ## Code used in the current workflow:
-#flow_data_analyses_10132016.R : this generates cleaned table of flows and data table used in analyses and figures
-#flow_data_analyses_production_of_tables_figures_10132016.R: figure and table creation
-#flow_data_analyses_function_09162016.R: function script used in analyses and figures
+## Code used in the current workflow:
+#flow_data_analyses_*.R : this generates cleaned table of flows and data table used in analyses and figures
+#flow_data_analyses_function_*.R: function script used in analyses and figures
+#flow_data_analyses_production_of_tables_figures_*.R: figures and tables creation
+#flow_data_analyses_production_of_tables_figures_functions_*.R: functions figures and tables 
+#
 
 ##################################################################################################
 #
@@ -79,10 +82,15 @@ filename_flow <- "MO1-9_ALL.txt"
 #Animal_conversion_nocode_10182016.csv
 #Crop_conv_nocode_10182016.csv
 #Crop_conv_wcode_10182016.csv
+#Meat_conversion_10182016.csv
+#Meat_conversion_nocode_10182016.csv
+#Meat_conversion_nocode_10182016 (2).csv
 
 conversion_rate_dir <- "/home/bparmentier/Google Drive/000_Flow_and_LUD_research/Quintana_Roo_Research/Conversion_To_Land"
 filename_conversion_rate_crop <- file.path(conversion_rate_dir, "Crop_conv_wcode_10182016.csv")
 filename_conversion_rate_livestock <- file.path(conversion_rate_dir,"Animal_conversion_wcode_10182016.csv")
+#filename_conversion_rate_meat <- file.path(conversion_rate_dir,"Meat_conversion_nocode_10182016.csv")
+filename_conversion_rate_meat <- file.path(conversion_rate_dir,"Meat_conversion_10182016.csv")
 
 CRS_WGS84 <- "+proj=longlat +ellps=WGS84 +datum=WGS84 +towgs84=0,0,0" #Station coords WGS84 # CONST 2
 proj_str<- CRS_WGS84 #param 2
@@ -91,7 +99,7 @@ CRS_reg <- CRS_WGS84 # PARAM 3
 file_format <- ".txt" #PARAM 4
 NA_value <- -9999 #PARAM5
 NA_flag_val <- NA_value #PARAM6
-out_suffix <-"flow_10182016" #output suffix for the files and ouptu folder #PARAM 7
+out_suffix <-"flow_10192016" #output suffix for the files and ouptu folder #PARAM 7
 create_out_dir_param=TRUE #PARAM8
 num_cores <- 4 #PARAM 9
 
@@ -901,5 +909,111 @@ tb_land_agri_filename <- paste("tb_land_","agri", out_suffix,".txt",sep="")
 write.table(tb_land_summarized,file= file.path(outDir,tb_land_summarized_agri_filename) ,sep=",")
 write.table(tb_land_summarized2,file=file.path(outDir,tb_land_summarized2_A_B_C_agri_filename),sep=",")
 write.table(tb_land_agri,file=file.path(outDir,tb_land_agri_filename),sep=",")
+
+#### Adding MEAT land consumption
+
+###################################################################
+#################### PART 6: CONVERSION FOR A SET OF AGRICULTURAL CROPS #############
+
+#filename_conversion_rate_crop <- file.path(conversion_rate_dir, "Crop_conversion_rates_10172016.csv")
+#filename_conversion_rate_livestock <- file.path(conversion_rate_dir,"Animal_conversion10172016.csv")
+#filename_conversion_rate_crop <- file.path(conversion_rate_dir, "Crop_conv_wcode_10182016.csv")
+#filename_conversion_rate_livestock <- file.path(conversion_rate_dir,"Animal_conversion_wcode_10182016.csv")
+filename_conversion_rate_meat <- file.path(conversion_rate_dir,"Meat_conversion_10182016.csv")
+
+tb_conversion_rate_meat <- read.table(filename_conversion_rate_meat,
+                                      header=T,stringsAsFactors = F,sep=",")
+tb_conversion_rate_meat$NOMPRODUCT
+names(tb_conversion_rate_meat)
+
+#select relevant product
+#selected_nom_product <- tb_conversion_rate_crop$NOMPRODUCT
+selected_nom_product <- tb_conversion_rate_meat$CODPROD
+#additional_cat1 <- c("CAPRINOS EN PIE","PORCINOS EN PIE DE CRIA","PORCINOS EN PIE","DESTETES PORCINO")
+
+#tb_to_convert <- subset(tb , tb$NOMPRODUCT %in% selected_nom_product)
+tb_to_convert <- subset(tb , tb$CODPROD %in% selected_nom_product)
+table(tb_to_convert$NV_UMEDIDA) #OK all TONELADA
+barplot(table(tb_to_convert$CODPROD),names.arg=names(table(tb_to_convert$CODPROD)),las=2)
+
+names(tb_conversion_rate_meat) <- c("CODPROD","NOMPRODUCT","conversion_rate")
+
+#debug(apply_conversion_rate)
+#list_converted_tb_products <- lapply(1:1,
+#                                     FUN=apply_conversion_rate,
+#                                     tb_conversion_rate=tb_conversion_rate_crop,
+#                                     tb_products=tb_to_convert,
+#                                     col_product_name="CODPROD")
+
+list_converted_tb_products <- lapply(1:nrow(tb_conversion_rate_meat),
+                                     FUN=apply_conversion_rate,
+                                     tb_conversion_rate=tb_conversion_rate_meat,
+                                     tb_products=tb_to_convert,
+                                     col_product_name="CODPROD")
+
+#list_converted_tb_products <- lapply(1:nrow(tb_conversion_rate_crop),FUN=apply_conversion_rate,
+#                              tb_conversion_rate=tb_conversion_rate_crop,
+#                              tb_products=tb_to_convert)
+
+sum(unlist(lapply(list_converted_tb_products,FUN=nrow)))
+
+tb_land_meat <- do.call(rbind,list_converted_tb_products)
+dim(tb_land_meat)
+### Get data for A and B etc...?
+
+#tb_summarized <- aggregate(land_consumption ~ year + product_cat , data = tb_land_crops , sum)
+tb_land_meat$percent_land_consumption <- (tb_land_meat$land_consumption/total_land_consumed_qr)*100
+
+tb_land_summarized <- aggregate(land_consumption ~ year + product_cat , data = tb_land_meat , sum)
+tb_land_summarized$total_land_consumed <- total_land_consumed_qr
+
+tb_land_summarized$percent_land_consumption <- (tb_land_summarized$land_consumption/total_land_consumed_qr)*100
+options(scipen=999)
+tb_land_summarized2 <- aggregate(land_consumption ~ year + NOMPRODUCT , data = tb_land_meat , sum)
+tb_land_summarized2$percent_land_consumption <- (tb_land_summarized2$land_consumption/total_land_consumed_qr)*100
+tb_land_summarized2$total_land_consumed <- total_land_consumed_qr
+
+
+p4 <- xyplot(percent_land_consumption ~ year | NOMPRODUCT,data=tb_land_summarized2,
+             type="b",
+             ylab="Head", 
+             main="Livestock flow extraction total by year ")
+p4 #not using right now
+#drop melaza
+#tb_land_summarized3 <- tb_land_summarized2[!tb_land_summarized2$NOMPRODUCT=="MELAZA",]
+#p5 <- xyplot(percent_land_consumption ~ year | NOMPRODUCT,data=tb_land_summarized3,
+#             type="b",
+#             ylab="Head", 
+#             main="AGRI flow extraction total by year ")
+#p5
+
+#### For the results and figures
+
+plot(tb_land_summarized$percent_land_consumption ~year,data=tb_land_summarized,type="b",
+     ylab="% of land in QR",
+     main="MEAT land consumption as percentage of land")
+
+#plot(tb_summarized$land_consumption ~year,data=tb_summarized,type="b",main="crop")
+
+#tb_land_summarized2 <- aggregate(percent_land_consumption ~ flow_direction + year, data =  tb_land_agri, sum)
+
+#p6 <- xyplot(percent_land_consumption ~ year | flow_direction ,data=tb_land_summarized2,
+#             type="b",
+#             ylab="% of land in QR", 
+#             main="AGRI land consumption as percentage of land")
+
+#p6
+
+#### Writing the tables
+tb_land_meat$total_land_consumed <- total_land_consumed_qr
+
+tb_land_summarized_meat_filename <- paste("tb_land_summarized_","meat","_by_product_year",out_suffix,".txt",sep="")
+tb_land_summarized2_A_B_C_meat_filename <- paste("tb_land_summarized2_","meat","_by_flow_A_B_C_year",out_suffix,".txt",sep="")
+tb_land_meat_filename <- paste("tb_land_","meat", out_suffix,".txt",sep="")
+
+write.table(tb_land_summarized,file= file.path(outDir,tb_land_summarized_meat_filename) ,sep=",")
+write.table(tb_land_summarized2,file=file.path(outDir,tb_land_summarized2_A_B_C_meat_filename),sep=",")
+write.table(tb_land_meat,file=file.path(outDir,tb_land_meat_filename),sep=",")
+
 
 #################################  END OF FILE ###########################################
