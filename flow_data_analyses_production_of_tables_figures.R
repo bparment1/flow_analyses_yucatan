@@ -5,10 +5,10 @@
 #
 #AUTHOR: Benoit Parmentier                                                                       
 #DATE CREATED:08/30/2016 
-#DATE MODIFIED: 10/18/2016
+#DATE MODIFIED: 10/19/2016
 #
 #PROJECT: Flow and land cover change in QR and GYR with Marco Millones
-#COMMIT: changing xyplot for symbology for figure 3
+#COMMIT: changing barplot margin for labeling and updating title in combine xyplots
 
 ## Code used in the current workflow:
 #flow_data_analyses_10132016.R : this generates cleaned table of flows and data table used in analyses and figures
@@ -348,6 +348,8 @@ dev.off()
 
 p_3a_combined <- c(AGRI=list_plot_flow_direction[[1]], MEAT=list_plot_flow_direction[[2]], LIVESTOCK=list_plot_flow_direction[[3]],layout=c(3,1))#,main="CONSUMPTION")
 #             y.same=FALSE,layout=c(4,2))
+p_3a_combined <- update(p_3a_combined, 
+                        main=list("Flow total by year",cex=2))
 
 png_filename3a <- paste("Figure","_3a_combined_","agri_meat_livectock_flow_directions_A_B_C_",out_suffix,".png", sep="")
 
@@ -433,6 +435,8 @@ dev.off()
 
 p_3b_combined <- c(AGRI= list_plot_consumption[[1]], MEAT= list_plot_consumption[[2]], LIVESTOCK= list_plot_consumption[[3]],layout=c(3,1))#,main="CONSUMPTION")
 #             y.same=FALSE,layout=c(4,2))
+p_3b_combined <- update(p_3b_combined, 
+                        main=list("Flow consumption total by year",cex=2))
 
 png_filename3b <- paste("Figure","_3b_combined_","agri_meat_livectock_consumption_cat_",out_suffix,".png", sep="")
 
@@ -510,6 +514,8 @@ dev.off()
 
 p_3c_combined <- c(AGRI=list_plot_production[[1]], MEAT=list_plot_production[[2]], LIVESTOCK=list_plot_production[[3]],layout=c(3,1))#,main="CONSUMPTION")
 #             y.same=FALSE,layout=c(4,2))
+p_3c_combined <- update(p_3c_combined, 
+                        main=list("Flow production total by year",cex=2))
 
 png_filename3c <- paste("Figure","_3c_combined_","agri_meat_livectock_production_cat_",out_suffix,".png", sep="")
 
@@ -547,13 +553,13 @@ dev.off()
 ## Add colors to barplots
 #options(scipen=999)
 
-p6 <- barchart(NV_CANT ~ year, groups=hinterland_year_tb$labels ,
-               subset(hinterland_year_tb,hinterland_year_tb$product_cat=="livestock"),
-             type="b",
-             ylab="Head", 
-             horizontal=FALSE,
-             xlab = hinterland_year_tb$labels,
-             main="LIVESTOCK flow production total by year ")
+#p6 <- barchart(NV_CANT ~ year, groups=hinterland_year_tb$labels ,
+#               subset(hinterland_year_tb,hinterland_year_tb$product_cat=="livestock"),
+#             type="b",
+#             ylab="Head", 
+#             horizontal=FALSE,
+#             xlab = hinterland_year_tb$labels,
+#             main="LIVESTOCK flow production total by year ")
 
 png_filename4a <- paste("Figure","_4a_","agri_hinterland_cat_sum_",out_suffix,".png", sep="")
 png_filename4b <- paste("Figure","_4b_","meat_hinterland_cat_sum_",out_suffix,".png", sep="")
@@ -575,6 +581,7 @@ hinterland_year_tb <- subset(hinterland_year_tb, hinterland_year_tb$flow_dist_hi
 layout_m <- c(1.5,1)
 
 col_palette <- c("red","blue","darkgreen")
+names_hint <- c("QR","GYR","MEX")
 
 #### Agri hinterland
 
@@ -589,16 +596,24 @@ heights <- do.call(cbind , l_heights)
 heights <-as.matrix(t(heights))
 
 png(png_filename4a,
-    height=480*layout_m[2],width=480*layout_m[1])
+    height=500*layout_m[2],width=500*layout_m[1])
 
 #barplot(hint_tmp$NV_CANT,names.arg=x_labels,las=2,
 #        main="AGRI flows total quantities by hinterland category")
+#op <- par(mar = c(10,4,4,2) + 0.1) #adding space in margins
+par(mar=c(6,6,4,2)+0.1) #order is bottom,left,top and right?
+#barplot(table(vec), las = 2)
+
 barplot(heights,names.arg=x_labels,las=2,
         main="AGRI flows total quantities by hinterland category",
         #names.arg=names_ind,
         cex.names=1.1,   
         col=col_palette, 
         beside=TRUE) # see two barplots for comparisons...
+#par(op) ## reset
+legend("topleft",legend=names_hint, 
+       cex=0.95, col=col_palette,fill=col_palette,bty="n")
+
 dev.off()
 
 #### Meat hinterland
@@ -613,7 +628,9 @@ heights <- do.call(cbind , l_heights)
 heights <-as.matrix(t(heights))
 
 png(png_filename4b,
-    height=480*layout_m[2],width=480*layout_m[1])
+    height=500*layout_m[2],width=500*layout_m[1])
+#op <- par(mar = c(10,4,4,2) + 0.1) #adding space in margins
+par(mar=c(6,6,4,2)+0.1) #order is bottom,left,top and right?
 
 barplot(heights,names.arg=x_labels,las=2,
         main="MEAT flows total quantities by hinterland category",
@@ -621,7 +638,9 @@ barplot(heights,names.arg=x_labels,las=2,
         cex.names=1.1,   
         col=col_palette, 
         beside=TRUE) # see two barplots for comparisons...
-
+#par(op) ## reset
+legend("topleft",legend=names_hint, 
+       cex=0.95, col=col_palette,fill=col_palette,bty="n")
 dev.off()
 
 
@@ -641,57 +660,78 @@ heights <-as.matrix(t(heights))
 ### Make this a function
 
 png(png_filename4c,
-    height=480*layout_m[2],width=480*layout_m[1])
+    height=500*layout_m[2],width=500*layout_m[1])
+#op <- par(mar = c(10,4,4,2) + 0.1) #adding space in margins
+par(mar=c(6,6,4,2)+0.1) #order is bottom,left,top and right?
 barplot(heights,names.arg=x_labels,las=2,
         main="LIVESTOCK flows total quantities by hinterland category",
         #names.arg=names_ind,
         cex.names=1.1,   
         col=c("red","blue","darkgreen"), 
         beside=TRUE) # see two barplots for comparisons...
+#par(op)
+legend("topleft",legend=names_hint, 
+       cex=0.95, col=col_palette,fill=col_palette,bty="n")
 dev.off()
+
+############### COMBINE Fig4
+## Now combine all plots for figure 4 (a,b and c):
+#Use ImageMagick
+#convert Figure_4a_agri_hinterland_cat_sum_flow_10182016.png Figure_4b_meat_hinterland_cat_sum_flow_10182016.png Figure_4c_livestock_hinterland_cat_sum_flow_10182016.png -append test.png
+#use convert fig1.png fig2.png fig3.png -append to join vertically
+#use convert fig1.png fig2.png fig3.png +append to join left to right
+
+png_filename4_combined <- paste("Figure_4a_agri_meat_livestock_hinterland_cat_sum_","_",out_suffix,".png",sep="")
+cmd_str <- paste("convert",
+                 png_filename4a,
+                 png_filename4b,
+                 png_filename4c,
+                 "+append",
+                 png_filename4_combined,sep=" ")
+system(cmd_str)
 
 ##### Use function to generate barplot
 
-options(scipen=999)
-layout_m <- c(1.5,1)
+#options(scipen=999)
+#layout_m <- c(1.5,1)
 
-col_palette <- c("red","blue","darkgreen")
+#col_palette <- c("red","blue","darkgreen")
 
 #### Agri hinterland
 
 #dates_val <- hinterland_year_tb$labels
 
-product_cat_val <- "agri"
-title_str <- "AGRI flows total quantities by hinterland category"
-hint_tmp <- subset(hinterland_year_tb,hinterland_year_tb$product_cat=="livestock")
-x_labels <- hint_tmp$labels
-png_filename4a <- paste("Figure","_4a_","agri_hinterland_cat_sum_",out_suffix,".png", sep="")
+#product_cat_val <- "agri"
+#title_str <- "AGRI flows total quantities by hinterland category"
+#hint_tmp <- subset(hinterland_year_tb,hinterland_year_tb$product_cat=="livestock")
+#x_labels <- hint_tmp$labels
+#png_filename4a <- paste("Figure","_4a_","agri_hinterland_cat_sum_",out_suffix,".png", sep="")
 #png_filename4b <- paste("Figure","_4b_","meat_hinterland_cat_sum_",out_suffix,".png", sep="")
 #png_filename4c <- paste("Figure","_4c_","livestock_hinterland_cat_sum_",out_suffix,".png", sep="")
 
-out_barplot_png <- generate_barplot_flows(df_tb=hinterland_year_tb,
-                                           x_labels=x_labels,
-                                           col_palette=col_palette,
-                                           layout_m=layout_m,
-                                           product_cat_val=product_cat_val,
-                                           title_str=title_str,
-                                           out_filename=png_filename4a)
+#out_barplot_png <- generate_barplot_flows(df_tb=hinterland_year_tb,
+#                                           x_labels=x_labels,
+#                                           col_palette=col_palette,
+#                                           layout_m=layout_m,
+#                                           product_cat_val=product_cat_val,
+#                                           title_str=title_str,
+#                                           out_filename=png_filename4a)
 #### Now meat
 
-product_cat_val <- "meat"
-title_str <- "MEAT flows total quantities by hinterland category"
-hint_tmp <- subset(hinterland_year_tb,hinterland_year_tb$product_cat=="livestock")
-x_labels <- hint_tmp$labels
-png_filename4b <- paste("Figure","_4b_","meat_hinterland_cat_sum_",out_suffix,".png", sep="")
+#product_cat_val <- "meat"
+#title_str <- "MEAT flows total quantities by hinterland category"
+#hint_tmp <- subset(hinterland_year_tb,hinterland_year_tb$product_cat=="livestock")
+#x_labels <- hint_tmp$labels
+#png_filename4b <- paste("Figure","_4b_","meat_hinterland_cat_sum_",out_suffix,".png", sep="")
 
 
-out_barplot_png <- generate_barplot_flows(df_tb=hinterland_year_tb,
-                                          x_labels=x_labels,
-                                          col_palette=col_palette,
-                                          layout_m=layout_m,
-                                          product_cat_val=product_cat_val,
-                                          title_str=title_str,
-                                          out_filename=png_filename4a)
+#out_barplot_png <- generate_barplot_flows(df_tb=hinterland_year_tb,
+#                                          x_labels=x_labels,
+#                                          col_palette=col_palette,
+#                                          layout_m=layout_m,
+#                                          product_cat_val=product_cat_val,
+#                                          title_str=title_str,
+#                                          out_filename=png_filename4a)
 
 
 
