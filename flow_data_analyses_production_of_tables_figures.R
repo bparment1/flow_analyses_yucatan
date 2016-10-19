@@ -8,7 +8,7 @@
 #DATE MODIFIED: 10/18/2016
 #
 #PROJECT: Flow and land cover change in QR and GYR with Marco Millones
-#COMMIT: changing xyplot for consumption, production and total flow figures combined
+#COMMIT: changing xyplot for symbology for figure 3
 
 ## Code used in the current workflow:
 #flow_data_analyses_10132016.R : this generates cleaned table of flows and data table used in analyses and figures
@@ -90,7 +90,7 @@ CRS_reg <- CRS_WGS84 # PARAM 3
 file_format <- ".txt" #PARAM 4
 NA_value <- -9999 #PARAM5
 NA_flag_val <- NA_value #PARAM6
-out_suffix <-"flow_10132016" #output suffix for the files and ouptu folder #PARAM 7
+out_suffix <-"flow_10182016" #output suffix for the files and ouptu folder #PARAM 7
 
 create_out_dir_param=TRUE #PARAM8
 num_cores <- 4 #PARAM 9
@@ -99,7 +99,7 @@ num_cores <- 4 #PARAM 9
 #inDir <- "/home/bparmentier/Google Drive/000_Flow_and_LUD_research/Quintana_Roo_Research/Data/output_flow_08302016/"
 #inDir <- NULL #if NULL then generate input dir from out_suffix
 #inDir <- file.path(inDir, paste0("output_flow_",out_suffix))
-inDir <- "/home/bparmentier/Google Drive/000_Flow_and_LUD_research/Quintana_Roo_Research/Data/output_flow_10132016"
+inDir <- "/home/bparmentier/Google Drive/000_Flow_and_LUD_research/Quintana_Roo_Research/Data/output_flow_10182016"
 setwd(inDir)
 
 outDir <- inDir
@@ -303,8 +303,9 @@ for(i in 1:length(list_names_cat)){
   y_lab <- list_y_lab[i]
   
   p_plot <- xyplot(NV_CANT ~ year, groups=flow_direction,subset(df_table,product_cat==names_cat),
-                   pch=1:2,pch.cex=3,
-                   auto.key=list(columns=1,corner=c(1,0),cex=1.2,font=2), #Legend information
+                   pch=1:3,pch.cex=3,
+                   auto.key=list(columns=1,corner=c(0,0.95),cex=1.2,font=2), #Legend information
+                   par.settings = list(superpose.symbol = list(pch = 1:3)), #modify legend auto.key
                    type="b",
                    ylab=list(label=y_lab, cex=2, font=2),
                    xlab=list(label="year", cex=2,font=2),
@@ -315,6 +316,10 @@ for(i in 1:length(list_names_cat)){
   
 }
 
+#par.settings=list(superpose.symbol=list(
+#  pch=c(15,16,17,3),
+#  col=c("blue","red","green","purple"))
+  
 png_filename3a1 <- paste("Figure","_3a1_","agri_flow_directions_",out_suffix,".png", sep="")
 png_filename3a2 <- paste("Figure","_3a2_","meat_flow_directions_",out_suffix,".png", sep="")
 png_filename3a3 <- paste("Figure","_3a3_","livestock_flow_directions_",out_suffix,".png", sep="")
@@ -387,8 +392,9 @@ for(i in 1:length(list_names_cat)){
   y_lab <- list_y_lab[i]
   
   p_plot <- xyplot(NV_CANT ~ year, groups=consumption_cat,subset(df_table,product_cat==names_cat),
-                   pch=1:2,pch.cex=3,
-                   auto.key=list(columns=1,corner=c(1,0),cex=1.2,font=2), #Legend information
+                   pch=1:3,pch.cex=3, #pch assigns the point type of symbol used
+                   auto.key=list(columns=1,corner=c(0,0.95),cex=1.2,font=2), #Legend information
+                   par.settings = list(superpose.symbol = list(pch = 1:3)), #modify legend auto.key
                    type="b",
                    ylab=list(label=y_lab, cex=2, font=2),
                    xlab=list(label="year", cex=2,font=2),
@@ -467,8 +473,9 @@ for(i in 1:length(list_names_cat)){
   y_lab <- list_y_lab[i]
   
   p_plot <- xyplot(NV_CANT ~ year, groups=extraction_cat,subset(tb_summary2,tb_summary2$product_cat==names_cat),
-               pch=1:2,pch.cex=3,
-               auto.key=list(columns=1,corner=c(1,0),cex=1.2,font=2), #Legend information
+               pch=1:3,pch.cex=3,
+               auto.key=list(columns=1,corner=c(0,0.95),cex=1.2,font=2), #Legend information
+               par.settings = list(superpose.symbol = list(pch = 1:3)), #modify legend auto.key
                type="b",
                ylab=list(label=y_lab, cex=2, font=2),
                xlab=list(label="year", cex=2,font=2),
@@ -806,7 +813,7 @@ png(png_filename7,
     height=480*layout_m[2],width=480*layout_m[1])
 
 plot(percent_land_consumption_total ~ year,data=tb_land_summarized_combined ,type="b",
-     ylim=c(0,250),
+     ylim=c(0,280),
      ylab="% of land in QR",
      main="Total land consumption as percentage of land")
 
