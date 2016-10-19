@@ -8,8 +8,7 @@
 #DATE MODIFIED: 10/19/2016
 #
 #PROJECT: Flow and land cover change in QR and GYR with Marco Millones
-#COMMIT: changing barplot margin for labeling and updating title in combine xyplots
-
+#COMMIT: changing barplot margin, labels size and combining with ImageMagick
 ## Code used in the current workflow:
 #flow_data_analyses_10132016.R : this generates cleaned table of flows and data table used in analyses and figures
 #flow_data_analyses_function_09162016.R: function script used in analyses and figures
@@ -681,7 +680,7 @@ dev.off()
 #use convert fig1.png fig2.png fig3.png -append to join vertically
 #use convert fig1.png fig2.png fig3.png +append to join left to right
 
-png_filename4_combined <- paste("Figure_4a_agri_meat_livestock_hinterland_cat_sum_","_",out_suffix,".png",sep="")
+png_filename4_combined <- paste("Figure_4_combined_agri_meat_livestock_hinterland_cat_sum_","_",out_suffix,".png",sep="")
 cmd_str <- paste("convert",
                  png_filename4a,
                  png_filename4b,
@@ -689,6 +688,10 @@ cmd_str <- paste("convert",
                  "+append",
                  png_filename4_combined,sep=" ")
 system(cmd_str)
+
+#To look up later to change resolution with ImageMagick
+#http://www.imagemagick.org/discourse-server/viewtopic.php?t=18241
+#convert -units PixelsPerInch rose1.png -resample 300 rose2d.jpg
 
 ##### Use function to generate barplot
 
@@ -734,7 +737,7 @@ system(cmd_str)
 #                                          out_filename=png_filename4a)
 
 
-
+##########################################
 ######### Figure 5: decoupling: aggregated flows by total numbers and quantities for three products
 # Figure 5: Decoupling of Quintana Roo expressed by total number of flows (top) and total quantities (bottom) by distance (Hinterland variable) for three type of products: agriculture, meat and livestock.
 
@@ -750,8 +753,11 @@ x_label <- c("QR","GYR","MEX")
 hinterland_tb_quant <- aggregate(NV_CANT ~ flow_dist_cat + product_cat ,data=hinterland_tb_quant_trans,sum)
 hinterland_tb_trans <- aggregate(transaction_bool ~ flow_dist_cat + product_cat ,data=hinterland_tb_quant_trans,sum)
 
+col_palette <- c("red","blue","darkgreen")
+names_hint <- c("QR","GYR","MEX")
+legend_size <- 1.45
 
-### Now plot the figures
+### Now plot the figures: Turn this into a function later on!!
 png_filename5_bottom <- paste("Figure","_5_bottom_","agri_hinterland_cat_sum_",out_suffix,".png", sep="")
 ### Now plot the figures
 png_filename5_top <- paste("Figure","_5_top_","agri_hinterland_cat_sum_",out_suffix,".png", sep="")
@@ -766,33 +772,110 @@ png(filename=png_filename5_bottom,
     width=col_mfrow*res_pix,height=row_mfrow*res_pix)
 
 par(mfrow=c(row_mfrow,col_mfrow))
+par(mar=c(6,6,4,2)+0.1) #order is bottom,left,top and right?
 
 hinterland_tb_tmp <- subset(hinterland_tb_quant,product_cat=="agri")
-barplot(hinterland_tb_tmp$NV_CANT,main="AGRI volumes",names.arg=x_label,cex.axis=1.1,cex.lab=1.3,ylab="Tons")
+barplot(hinterland_tb_tmp$NV_CANT,main="AGRI volumes",
+        cex.main=2,
+        names.arg=x_label,
+        cex.axis=1.5,
+        cex.lab=2,
+        ylab="Tons",
+        cex.names=1.6,   
+        col=col_palette)
+
+legend("topleft",legend=names_hint, 
+       cex=legend_size, col=col_palette,fill=col_palette,bty="n")
 
 hinterland_tb_tmp <- subset(hinterland_tb_quant,product_cat=="meat")
-barplot(hinterland_tb_tmp$NV_CANT,main="MEAT volumes",names.arg=x_label,cex.axis=1.1,cex.lab=1.3,ylab="Tons")
+barplot(hinterland_tb_tmp$NV_CANT,main="MEAT volumes",        
+        cex.main=2,
+        names.arg=x_label,
+        cex.axis=1.5,
+        cex.lab=2,
+        ylab="Tons",
+        cex.names=1.6,   
+        col=col_palette)
+
+legend("topleft",legend=names_hint, 
+       cex=legend_size, col=col_palette,fill=col_palette,bty="n")
 
 hinterland_tb_tmp <- subset(hinterland_tb_quant,product_cat=="livestock")
-barplot(hinterland_tb_tmp$NV_CANT,main="LIVESTOCK volumes",names.arg=x_label,cex.axis=1.1,cex.lab=1.3,ylab="Heads")
+barplot(hinterland_tb_tmp$NV_CANT,main="LIVESTOCK volumes",
+        cex.main=2,
+        names.arg=x_label,
+        cex.axis=1.5,
+        cex.lab=2,
+        ylab="Heads",
+        cex.names=1.6,   
+        col=col_palette)
+
+legend("topleft",legend=names_hint, 
+       cex=legend_size, col=col_palette,fill=col_palette,bty="n")
 
 dev.off()
 
+############# Top
+legend_size <- 1.45
+  
 png(filename=png_filename5_top,
     width=col_mfrow*res_pix,height=row_mfrow*res_pix)
 
 par(mfrow=c(row_mfrow,col_mfrow))
+par(mar=c(6,6,4,2)+0.1) #order is bottom,left,top and right? give more space for margins
 
 hinterland_tb_tmp <- subset(hinterland_tb_trans,product_cat=="agri")
-barplot(hinterland_tb_tmp$transaction_bool,main="AGRI transactions",names.arg=x_label,cex.axis=1.1,cex.lab=1.3,ylab="Number of transactions")
+barplot(hinterland_tb_tmp$transaction_bool,main="AGRI transactions",
+        cex.main=2,
+        names.arg=x_label,
+        cex.axis=1.5,
+        cex.lab=2,ylab="Number of transactions",
+        cex.names=1.6,   
+        col=col_palette)
+legend("topleft",legend=names_hint, 
+       cex=legend_size, col=col_palette,fill=col_palette,bty="n")
+
 
 hinterland_tb_tmp <- subset(hinterland_tb_trans,product_cat=="meat")
-barplot(hinterland_tb_tmp$transaction_bool,main="MEAT transactions",names.arg=x_label,cex.axis=1.1,cex.lab=1.3,ylab="Number of transactions")
+barplot(hinterland_tb_tmp$transaction_bool,main="MEAT transactions",
+        cex.main=2,
+        names.arg=x_label,
+        cex.axis=1.5,
+        cex.lab=2,ylab="Number of transactions",
+        cex.names=1.6,   
+        col=col_palette)
+legend("topleft",legend=names_hint, 
+       cex=legend_size, col=col_palette,fill=col_palette,bty="n")
+
 
 hinterland_tb_tmp <- subset(hinterland_tb_trans,product_cat=="livestock")
-barplot(hinterland_tb_tmp$transaction_bool,main="LIVESTOCK transactions",names.arg=x_label,cex.axis=1.1,cex.lab=1.3,ylab="Number of transactions")
+barplot(hinterland_tb_tmp$transaction_bool,main="LIVESTOCK transactions",
+        cex.main=2,
+        names.arg=x_label,
+        cex.axis=1.5,
+        cex.lab=2,ylab="Number of transactions",
+        cex.names=1.6,   
+        col=col_palette)
+legend("topleft",legend=names_hint, 
+       cex=legend_size, col=col_palette,fill=col_palette,bty="n")
 
 dev.off()
+
+############### COMBINE Fig4
+## Now combine all plots for figure 4 (a,b and c):
+#Use ImageMagick
+#convert Figure_4a_agri_hinterland_cat_sum_flow_10182016.png Figure_4b_meat_hinterland_cat_sum_flow_10182016.png Figure_4c_livestock_hinterland_cat_sum_flow_10182016.png -append test.png
+#use convert fig1.png fig2.png fig3.png -append to join vertically
+#use convert fig1.png fig2.png fig3.png +append to join left to right
+
+
+png_filename5_combined <- paste("Figure","_5_combined_","agri_meat_livestock_hinterland_cat_sum_",out_suffix,".png", sep="")
+cmd_str <- paste("convert",
+                 png_filename5_bottom,
+                 png_filename5_top,
+                 "-append", #join top and bottom
+                 png_filename5_combined,sep=" ")
+system(cmd_str)
 
 ######### Figure 6: Total land consumption for crop and livestock
 
