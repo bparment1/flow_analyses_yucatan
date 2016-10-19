@@ -8,12 +8,12 @@
 #DATE MODIFIED: 10/19/2016
 #
 #PROJECT: Flow and land cover change in QR and GYR with Marco Millones
-#COMMIT: changing barplot margin, labels size and combining with ImageMagick
+#COMMIT: Figure 6, land consumption, improving figure and combining
 ## Code used in the current workflow:
-#flow_data_analyses_10132016.R : this generates cleaned table of flows and data table used in analyses and figures
-#flow_data_analyses_function_09162016.R: function script used in analyses and figures
-#flow_data_analyses_production_of_tables_figures_10142016.R: figures and tables creation
-#flow_data_analyses_production_of_tables_figures_functions_10142016.R: functions figures and tables 
+#flow_data_analyses_*.R : this generates cleaned table of flows and data table used in analyses and figures
+#flow_data_analyses_function_*.R: function script used in analyses and figures
+#flow_data_analyses_production_of_tables_figures_*.R: figures and tables creation
+#flow_data_analyses_production_of_tables_figures_functions_*.R: functions figures and tables 
 #
 
 ##################################################################################################
@@ -877,42 +877,69 @@ cmd_str <- paste("convert",
                  png_filename5_combined,sep=" ")
 system(cmd_str)
 
+#########################
 ######### Figure 6: Total land consumption for crop and livestock
 
 #tb_land_agri$total_land_consumed <- total_land_consumed_qr
 
-tb_land_summarized_agri_filename <- paste("tb_land_summarized_","agri","_by_product_year",out_suffix,".txt",sep="")
-tb_land_summarized2_A_B_C_agri_filename <- paste("tb_land_summarized2_","agri","_by_flow_A_B_C_year",out_suffix,".txt",sep="")
-tb_land_agri_filename <- paste("tb_land_","agri", out_suffix,".txt",sep="")
+#tb_land_summarized_agri_filename <- paste("tb_land_summarized_","agri","_by_product_year",out_suffix,".txt",sep="")
+#tb_land_summarized2_A_B_C_agri_filename <- paste("tb_land_summarized2_","agri","_by_flow_A_B_C_year",out_suffix,".txt",sep="")
+#tb_land_agri_filename <- paste("tb_land_","agri", out_suffix,".txt",sep="")
 
 
 #### Writing the tables
-tb_land_summarized_livestock_filename <- paste("tb_land_summarized_","livestock","_by_product_year",out_suffix,".txt",sep="")
-tb_land_summarized2_A_B_C_livestock_filename <- paste("tb_land_summarized2_","livestock","_by_flow_A_B_C_year",out_suffix,".txt",sep="")
-tb_land_livestock_filename <- paste("tb_land_","livestock", out_suffix,".txt",sep="")
+#tb_land_summarized_livestock_filename <- paste("tb_land_summarized_","livestock","_by_product_year",out_suffix,".txt",sep="")
+#tb_land_summarized2_A_B_C_livestock_filename <- paste("tb_land_summarized2_","livestock","_by_flow_A_B_C_year",out_suffix,".txt",sep="")
+#tb_land_livestock_filename <- paste("tb_land_","livestock", out_suffix,".txt",sep="")
 
 png_filename6a <- paste("Figure","_6a_","agri_total_percent_land_consumption_by_year",out_suffix,".png", sep="")
 png_filename6c <- paste("Figure","_6c_","livestock_total_percent_land_consumption_by_year",out_suffix,".png", sep="")
 
 layout_m <- c(1.5,1)
 
+##Figure 6a: AGRI
+y_range <- range(tb_land_summarized_agri$percent_land_consumption)
+y_range_lim <- c(0,y_range[2])
 png(png_filename6a,
     height=480*layout_m[2],width=480*layout_m[1])
 
-plot(percent_land_consumption ~ year,data=tb_land_summarized_agri ,type="b",
+plot(percent_land_consumption ~ year,data=tb_land_summarized_agri ,
+     type="b",
+     ylim=y_range_lim,
      ylab="% of land in QR",
      main="AGRI land consumption as percentage of land")
-
+abline(h=100,col=4,lty=2)
 dev.off()
+
+##Figure 6c: Livestock
+y_range <- range(tb_land_summarized_livestock$percent_land_consumption)
+if(y_range[2]<100){
+  y_range_lim <- c(0,100)
+}else{
+  y_range_lim <- c(0,y_range[2])
+}
 
 png(png_filename6c,
     height=480*layout_m[2],width=480*layout_m[1])
 
-plot(percent_land_consumption ~year,data=tb_land_summarized_livestock,type="b",
+plot(percent_land_consumption ~year,data=tb_land_summarized_livestock,
+     type="b",
+     ylim=y_range_lim,
      ylab="% of land in QR",
      main="LIVESTOCK land consumption as percentage of land")
+abline(h=100,col=4,lty=2)
 
 dev.off()
+
+png_filename6_combined <- paste("Figure","_6_combined_",
+                                "agri_meat_livestock_total_percent_land_consumption_by_year_",
+                                out_suffix,".png", sep="")
+cmd_str <- paste("convert",
+                 png_filename6a,
+                 png_filename6c,
+                 "+append", #join top and bottom
+                 png_filename6_combined,sep=" ")
+system(cmd_str)
 
 #################
 ####Figure 7: combine agri and livestock land consumption
