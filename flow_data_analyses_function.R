@@ -5,7 +5,7 @@
 #
 #AUTHOR: Benoit Parmentier                                                                       
 #DATE CREATED: 09/15/2016 
-#DATE MODIFIED: 10/18/2016
+#DATE MODIFIED: 10/19/2016
 #
 #PROJECT: Flow, land cover change with Marco Millones
 #COMMIT: editing conversion rate function to allow code name
