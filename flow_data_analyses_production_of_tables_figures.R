@@ -5,10 +5,10 @@
 #
 #AUTHOR: Benoit Parmentier                                                                       
 #DATE CREATED:08/30/2016 
-#DATE MODIFIED: 10/19/2016
+#DATE MODIFIED: 10/20/2016
 #
 #PROJECT: Flow and land cover change in QR and GYR with Marco Millones
-#COMMIT: Figure 6, land consumption, improving figure and combining
+#COMMIT: updates on Figure 3 (flow) and Figure 6,land consumption, and combining
 ## Code used in the current workflow:
 #flow_data_analyses_*.R : this generates cleaned table of flows and data table used in analyses and figures
 #flow_data_analyses_function_*.R: function script used in analyses and figures
@@ -89,7 +89,7 @@ CRS_reg <- CRS_WGS84 # PARAM 3
 file_format <- ".txt" #PARAM 4
 NA_value <- -9999 #PARAM5
 NA_flag_val <- NA_value #PARAM6
-out_suffix <-"flow_10182016" #output suffix for the files and ouptu folder #PARAM 7
+out_suffix <-"flow_10202016" #output suffix for the files and ouptu folder #PARAM 7
 
 create_out_dir_param=TRUE #PARAM8
 num_cores <- 4 #PARAM 9
@@ -98,7 +98,7 @@ num_cores <- 4 #PARAM 9
 #inDir <- "/home/bparmentier/Google Drive/000_Flow_and_LUD_research/Quintana_Roo_Research/Data/output_flow_08302016/"
 #inDir <- NULL #if NULL then generate input dir from out_suffix
 #inDir <- file.path(inDir, paste0("output_flow_",out_suffix))
-inDir <- "/home/bparmentier/Google Drive/000_Flow_and_LUD_research/Quintana_Roo_Research/Data/output_flow_10182016"
+inDir <- "/home/bparmentier/Google Drive/000_Flow_and_LUD_research/Quintana_Roo_Research/Data/output_flow_10202016"
 setwd(inDir)
 
 outDir <- inDir
@@ -142,6 +142,10 @@ hinterland_tb_quant_trans_year_product_sum_filename <- paste("hinterland_tb_quan
 tb_land_summarized_agri_filename <- paste("tb_land_summarized_","agri","_by_product_year",out_suffix,".txt",sep="")
 tb_land_summarized2_A_B_C_agri_filename <- paste("tb_land_summarized2_","agri","_by_flow_A_B_C_year",out_suffix,".txt",sep="")
 tb_land_agri_filename <- paste("tb_land_","agri", out_suffix,".txt",sep="")
+#Meat
+tb_land_summarized_meat_filename <- paste("tb_land_summarized_","meat","_by_product_year",out_suffix,".txt",sep="")
+tb_land_summarized2_A_B_C_meat_filename <- paste("tb_land_summarized2_","meat","_by_flow_A_B_C_year",out_suffix,".txt",sep="")
+tb_land_meat_filename <- paste("tb_land_","meat", out_suffix,".txt",sep="")
 #livestock
 tb_land_summarized_livestock_filename <- paste("tb_land_summarized_","livestock","_by_product_year",out_suffix,".txt",sep="")
 tb_land_summarized2_A_B_C_livestock_filename <- paste("tb_land_summarized2_","livestock","_by_flow_A_B_C_year",out_suffix,".txt",sep="")
@@ -185,6 +189,13 @@ tb_land_summarized_agri <- read.table(file.path(inDir,tb_land_summarized_agri_fi
 tb_land_summarized2_agri <- read.table(file.path(inDir,tb_land_summarized2_A_B_C_agri_filename),header=T,sep=",")
 tb_land_agri <- read.table(file.path(outDir,tb_land_agri_filename),header=T,sep=",")
 
+#meat
+tb_land_summarized_meat <- read.table(file=file.path(inDir,tb_land_summarized_meat_filename),header=T ,sep=",")
+tb_land_summarized2_meat <- read.table(file=file.path(inDir,tb_land_summarized2_A_B_C_meat_filename),header=T,sep=",")
+tb_land_meat <- read.table(file.path(inDir,tb_land_meat_filename),header=T,sep=",")
+#> tb_land_meat <- read.table(file.path(inDir,tb_land_meat_filename),header=T,sep=",")
+#Error in scan(file = file, what = what, sep = sep, quote = quote, dec = dec,  : 
+#                line 70249 did not have 63 elements
 #livestock
 tb_land_summarized_livestock <- read.table(file=file.path(inDir,tb_land_summarized_livestock_filename),header=T ,sep=",")
 tb_land_summarized2_livestock <- read.table(file=file.path(inDir,tb_land_summarized2_A_B_C_livestock_filename),header=T,sep=",")
@@ -350,7 +361,7 @@ p_3a_combined <- c(AGRI=list_plot_flow_direction[[1]], MEAT=list_plot_flow_direc
 p_3a_combined <- update(p_3a_combined, 
                         main=list("Flow total by year",cex=2))
 
-png_filename3a <- paste("Figure","_3a_combined_","agri_meat_livectock_flow_directions_A_B_C_",out_suffix,".png", sep="")
+png_filename3a <- paste("Figure","_3a_combined_","agri_meat_livestock_flow_directions_A_B_C_",out_suffix,".png", sep="")
 
 layout_m <- c(1.5,1)
 
@@ -437,7 +448,7 @@ p_3b_combined <- c(AGRI= list_plot_consumption[[1]], MEAT= list_plot_consumption
 p_3b_combined <- update(p_3b_combined, 
                         main=list("Flow consumption total by year",cex=2))
 
-png_filename3b <- paste("Figure","_3b_combined_","agri_meat_livectock_consumption_cat_",out_suffix,".png", sep="")
+png_filename3b <- paste("Figure","_3b_combined_","agri_meat_livestock_consumption_cat_",out_suffix,".png", sep="")
 
 layout_m <- c(1.5,1)
 
@@ -516,7 +527,7 @@ p_3c_combined <- c(AGRI=list_plot_production[[1]], MEAT=list_plot_production[[2]
 p_3c_combined <- update(p_3c_combined, 
                         main=list("Flow production total by year",cex=2))
 
-png_filename3c <- paste("Figure","_3c_combined_","agri_meat_livectock_production_cat_",out_suffix,".png", sep="")
+png_filename3c <- paste("Figure","_3c_combined_","agri_meat_livestock_production_cat_",out_suffix,".png", sep="")
 
 layout_m <- c(1.5,1)
 
@@ -529,19 +540,27 @@ dev.off()
 
 ###################### combine figure 3 #########
 
-p_3_combined <- c(AGRI=p_3a_combined, MEAT=p_3b_combined, LIVESTOCK=p_3c_combined,layout=c(3,3))#,main="CONSUMPTION")
+#p_3_combined <- c(AGRI=p_3a_combined, MEAT=p_3b_combined, LIVESTOCK=p_3c_combined,layout=c(3,3))#,main="CONSUMPTION")
 #             y.same=FALSE,layout=c(4,2))
 
-png_filename3 <- paste("Figure","_3_combined_","agri_meat_livectock_flows_consumption_production_cat_",out_suffix,".png", sep="")
+png_filename3_combined <- paste("Figure","_3_combined_","agri_meat_livestock_flows_consumption_production_cat_",out_suffix,".png", sep="")
 
-layout_m <- c(1.5,1)
+#layout_m <- c(1.5,1)
 
-## Improve size of the font!!!
-png(png_filename3,
-    #height=480*layout_m[2],width=480*layout_m[1])
-    height=480*3,width=480*3)
-print(p_3_combined)
-dev.off()
+# ## Improve size of the font!!!
+# png(png_filename3,
+#     #height=480*layout_m[2],width=480*layout_m[1])
+#     height=480*3,width=480*3)
+# print(p_3_combined)
+# dev.off()
+
+cmd_str <- paste("convert",
+                 png_filename3a,
+                 png_filename3b,
+                 png_filename3c,
+                 "-append",
+                 png_filename3_combined,sep=" ")
+system(cmd_str)
 
 #############################
 ##### Figure 4: Decoupling from distance flow and years
@@ -692,6 +711,9 @@ system(cmd_str)
 #To look up later to change resolution with ImageMagick
 #http://www.imagemagick.org/discourse-server/viewtopic.php?t=18241
 #convert -units PixelsPerInch rose1.png -resample 300 rose2d.jpg
+
+#http://superuser.com/questions/479197/i-want-to-change-dpi-with-imagemagick-without-changing-the-actual-byte-size-of-t
+#convert -units PixelsPerInch input.png -density 300 output.png
 
 ##### Use function to generate barplot
 
@@ -893,6 +915,7 @@ system(cmd_str)
 #tb_land_livestock_filename <- paste("tb_land_","livestock", out_suffix,".txt",sep="")
 
 png_filename6a <- paste("Figure","_6a_","agri_total_percent_land_consumption_by_year",out_suffix,".png", sep="")
+png_filename6b <- paste("Figure","_6b_","meat_total_percent_land_consumption_by_year",out_suffix,".png", sep="")
 png_filename6c <- paste("Figure","_6c_","livestock_total_percent_land_consumption_by_year",out_suffix,".png", sep="")
 
 layout_m <- c(1.5,1)
@@ -910,6 +933,21 @@ plot(percent_land_consumption ~ year,data=tb_land_summarized_agri ,
      main="AGRI land consumption as percentage of land")
 abline(h=100,col=4,lty=2)
 dev.off()
+
+##Figure 6b: MEAT
+y_range <- range(tb_land_summarized_meat$percent_land_consumption)
+y_range_lim <- c(0,y_range[2])
+png(png_filename6b,
+    height=480*layout_m[2],width=480*layout_m[1])
+
+plot(percent_land_consumption ~ year,data=tb_land_summarized_meat ,
+     type="b",
+     ylim=y_range_lim,
+     ylab="% of land in QR",
+     main="MEAT land consumption as percentage of land")
+abline(h=100,col=4,lty=2)
+dev.off()
+
 
 ##Figure 6c: Livestock
 y_range <- range(tb_land_summarized_livestock$percent_land_consumption)
@@ -936,6 +974,7 @@ png_filename6_combined <- paste("Figure","_6_combined_",
                                 out_suffix,".png", sep="")
 cmd_str <- paste("convert",
                  png_filename6a,
+                 png_filename6b,
                  png_filename6c,
                  "+append", #join top and bottom
                  png_filename6_combined,sep=" ")
@@ -946,11 +985,14 @@ system(cmd_str)
 
 tb_land_summarized_livestock$percent_land_consumption
 tb_land_summarized_agri$percent_land_consumption
+tb_land_summarized_meat$percent_land_consumption
 
 tb_land_summarized_combined <- subset(tb_land_summarized_livestock,select=c("year","percent_land_consumption"))
 names(tb_land_summarized_combined) <- c("year","percent_land_consumption_livestock")
 tb_land_summarized_combined$percent_land_consumption_agri <- tb_land_summarized_agri$percent_land_consumption
-tb_land_summarized_combined$percent_land_consumption_total <- tb_land_summarized_combined$percent_land_consumption_agri + tb_land_summarized_combined$percent_land_consumption_livestock
+tb_land_summarized_combined$percent_land_consumption_meat <- tb_land_summarized_meat$percent_land_consumption
+
+tb_land_summarized_combined$percent_land_consumption_total <- tb_land_summarized_combined$percent_land_consumption_agri + tb_land_summarized_combined$percent_land_consumption_livestock + + tb_land_summarized_combined$percent_land_consumption_meat
 
 #plot(tb_land_summarized_combined$percent_land_consumption_total ~ tb_land_summarized_combined$year)
 
