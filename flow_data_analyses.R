@@ -5,10 +5,10 @@
 #
 #AUTHOR: Benoit Parmentier                                                                       
 #DATE CREATED:07/11/2016 
-#DATE MODIFIED: 10/19/2016
+#DATE MODIFIED: 10/20/2016
 #
 #PROJECT: Flow, land cover change with Marco Millones
-#COMMIT: conversion function introduce to generate meat conversion factor
+#COMMIT: testing conversion function on all flow types and clean up of code
 #
 
 ## Code used in the current workflow:
@@ -69,7 +69,7 @@ load_obj <- function(f){
 
 in_dir_script <- "/home/bparmentier/Google Drive/000_Flow_and_LUD_research/Quintana_Roo_Research/scripts"
 infile1_function <- file.path(in_dir_script,
-                             "flow_data_analyses_function_10182016.R")
+                             "flow_data_analyses_function_10202016.R")
 source(infile1_function)
 
 #############################################
@@ -77,14 +77,6 @@ source(infile1_function)
 
 #Input file name with the flow data
 filename_flow <- "MO1-9_ALL.txt"
-
-#Animal_conversion_wcode_10182016.csv
-#Animal_conversion_nocode_10182016.csv
-#Crop_conv_nocode_10182016.csv
-#Crop_conv_wcode_10182016.csv
-#Meat_conversion_10182016.csv
-#Meat_conversion_nocode_10182016.csv
-#Meat_conversion_nocode_10182016 (2).csv
 
 conversion_rate_dir <- "/home/bparmentier/Google Drive/000_Flow_and_LUD_research/Quintana_Roo_Research/Conversion_To_Land"
 filename_conversion_rate_crop <- file.path(conversion_rate_dir, "Crop_conv_wcode_10182016.csv")
@@ -914,115 +906,21 @@ write.table(tb_land_agri,file=file.path(outDir,tb_land_agri_filename),sep=",")
 ###################################################################
 #################### PART 6: CONVERSION FOR A SET OF MEAT #############
 
-#filename_conversion_rate_crop <- file.path(conversion_rate_dir, "Crop_conversion_rates_10172016.csv")
-#filename_conversion_rate_livestock <- file.path(conversion_rate_dir,"Animal_conversion10172016.csv")
-#filename_conversion_rate_crop <- file.path(conversion_rate_dir, "Crop_conv_wcode_10182016.csv")
-#filename_conversion_rate_livestock <- file.path(conversion_rate_dir,"Animal_conversion_wcode_10182016.csv")
+flow_type <- "agri"
+#undebug(convert_to_land)
+
+convert_land_obj_agri <- convert_to_land(filename_conversion_rate_crop,
+                                         tb,
+                                         flow_type,
+                                         out_suffix,out_dir)
 
 flow_type <- "meat"
 #undebug(convert_to_land)
 
-test_land <- convert_to_land(filename_conversion_rate_meat,tb,flow_type,out_suffix,out_dir)
+convert_land_obj_meat <- convert_to_land(filename_conversion_rate_meat,
+                                         tb,
+                                         flow_type,
+                                         out_suffix,out_dir)
   
-convert_to_land <- function(filename_conversion_rate,tb,flow_type,out_suffix,out_dir){
-  #
-  #This function convert flow to land unit given conversion rate.
-  #
-  #INPUTS:
-  #filename_conversion_rate
-  #tb
-  #flow
-  #out_suffix
-  #out_dir
-  #OUTPUTS
-  #
-  
-  ### Start script ####
-  
-  options(scipen=999)
-  
-  #filename_conversion_rate_meat <- file.path(conversion_rate_dir,"Meat_conversion_10182016.csv")
-  
-  tb_conversion_rate <- read.table(filename_conversion_rate,
-                                        header=T,stringsAsFactors = F,sep=",")
-  #tb_conversion_rate$NOMPRODUCT
-  #names(tb_conversion_rate)
-  
-  #select relevant product
-  #selected_nom_product <- tb_conversion_rate$NOMPRODUCT
-  selected_nom_product <- tb_conversion_rate$CODPROD
-  tb_to_convert <- subset(tb , tb$CODPROD %in% selected_nom_product)
-  #table(tb_to_convert$NV_UMEDIDA) #OK all TONELADA
-  #barplot(table(tb_to_convert$CODPROD),names.arg=names(table(tb_to_convert$CODPROD)),las=2)
-  
-  names(tb_conversion_rate) <- c("CODPROD","NOMPRODUCT","conversion_rate")
-  
-  #debug(apply_conversion_rate)
-  #list_converted_tb_products <- lapply(1:1,
-  #                                     FUN=apply_conversion_rate,
-  #                                     tb_conversion_rate=tb_conversion_rate_crop,
-  #                                     tb_products=tb_to_convert,
-  #                                     col_product_name="CODPROD")
-  
-  list_converted_tb_products <- lapply(1:nrow(tb_conversion_rate),
-                                       FUN=apply_conversion_rate,
-                                       tb_conversion_rate=tb_conversion_rate,
-                                       tb_products=tb_to_convert,
-                                       col_product_name="CODPROD")
-  
-  sum(unlist(lapply(list_converted_tb_products,FUN=nrow)))
-  
-  tb_land <- do.call(rbind,list_converted_tb_products)
-  dim(tb_land)
-  
-  ### Get data for A and B etc...?
-  
-  #tb_summarized <- aggregate(land_consumption ~ year + product_cat , data = tb_land_crops , sum)
-  tb_land$percent_land_consumption <- (tb_land$land_consumption/total_land_consumed_qr)*100
-  
-  ### table 2
-  tb_land_summarized <- aggregate(land_consumption ~ year + product_cat , data = tb_land, sum)
-  tb_land_summarized$total_land_consumed <- total_land_consumed_qr
-  tb_land_summarized$percent_land_consumption <- (tb_land_summarized$land_consumption/total_land_consumed_qr)*100
-
-  tb_land_summarized2 <- aggregate(land_consumption ~ year + NOMPRODUCT , data = tb_land_meat , sum)
-  tb_land_summarized2$percent_land_consumption <- (tb_land_summarized2$land_consumption/total_land_consumed_qr)*100
-  tb_land_summarized2$total_land_consumed <- total_land_consumed_qr
-  
-  #### For the results and figures
-  
-  plot(tb_land_summarized$percent_land_consumption ~ year,
-       data=tb_land_summarized,type="b",
-       ylab="% of land",
-       main=paste(flow_type, "land consumption as percentage of land",sep=" "))
-  
-
-  #### Writing the tables
-  tb_land$total_land_consumed <- total_land_consumed_qr
-  
-  #flow_type can be meat, agri, livestock
-  tb_land_summarized_filename <- paste("tb_land_summarized_",flow_type,"_by_product_year",out_suffix,".txt",sep="")
-  tb_land_summarized2_A_B_C_filename <- paste("tb_land_summarized2_",flow_type,"_by_flow_A_B_C_year",out_suffix,".txt",sep="")
-  tb_land_filename <- paste("tb_land_",flow_type, out_suffix,".txt",sep="")
-  
-  write.table(tb_land_summarized,file= file.path(outDir,tb_land_summarized_filename) ,sep=",")
-  write.table(tb_land_summarized2,file=file.path(outDir,tb_land_summarized2_A_B_C_filename),sep=",")
-  write.table(tb_land,file=file.path(outDir,tb_land_filename),sep=",")
-  
-  #### Prepare return object
-  
-  convert_to_land_obj <- list(tb_land_summarized_filename, 
-                              tb_land_summarized2_A_B_C_filename,
-                              tb_land_filename) 
-  names(convert_to_land_obj) <- c("tb_land_summarized_filename", 
-                                  "tb_land_summarized2_A_B_C_filename",
-                                  "tb_land_filename")
-  
-  return(convert_to_land_obj)
-  
-}
-
-
-
 
 #################################  END OF FILE ###########################################
