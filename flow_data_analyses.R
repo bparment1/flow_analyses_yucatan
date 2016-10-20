@@ -82,7 +82,7 @@ conversion_rate_dir <- "/home/bparmentier/Google Drive/000_Flow_and_LUD_research
 filename_conversion_rate_crop <- file.path(conversion_rate_dir, "Crop_conv_wcode_10182016.csv")
 filename_conversion_rate_livestock <- file.path(conversion_rate_dir,"Animal_conversion_wcode_10182016.csv")
 #filename_conversion_rate_meat <- file.path(conversion_rate_dir,"Meat_conversion_nocode_10182016.csv")
-filename_conversion_rate_meat <- file.path(conversion_rate_dir,"Meat_conversion_10182016.csv")
+filename_conversion_rate_meat <- file.path(conversion_rate_dir,"Meat_conversion_10182016.csv") #with code
 
 CRS_WGS84 <- "+proj=longlat +ellps=WGS84 +datum=WGS84 +towgs84=0,0,0" #Station coords WGS84 # CONST 2
 proj_str<- CRS_WGS84 #param 2
@@ -91,7 +91,7 @@ CRS_reg <- CRS_WGS84 # PARAM 3
 file_format <- ".txt" #PARAM 4
 NA_value <- -9999 #PARAM5
 NA_flag_val <- NA_value #PARAM6
-out_suffix <-"flow_10192016" #output suffix for the files and ouptu folder #PARAM 7
+out_suffix <-"flow_10202016" #output suffix for the files and ouptu folder #PARAM 7
 create_out_dir_param=TRUE #PARAM8
 num_cores <- 4 #PARAM 9
 
@@ -669,242 +669,7 @@ land_consumed_qr <- data_df_spdf_qr$land_consumed*1/0.01
 total_land_consumed_qr <- sum(land_consumed_qr) #This is the total land available over 2000-2009?
 
 ###################################################################
-#################### PART5: CONVERSION FOR LIVESTOCK: CATTLE COW AND RELATED #############
-
-###### NOW SELECT PRODUCT AND COMPARE TO AVAILABLE LAND
-### Step 1: conversion of flow to land use
-
-#http://www.fao.org/ag/agp/agpc/doc/counprof/mexico/Mexico.htm
-#http://www.fao.org/docrep/010/a0701e/a0701e00.HTM
-
-#1. isolate  'bovino' from the aggregate livestock category, but you can try including 'caprino' and 'porcino' and 'ovino' as well
-#select all that contain 'bovino' or 'caprino' or 'porcino' AND 'cabezas'
-
-#Stocking rates from 0.5 1 AU (head) per ha. for Mexico, tropical areas are more extensive 0.3. If we use 1 head per ha we are being generous
-tb_livestock_all <- subset(tb,tb$product_cat=="livestock")
-tb_summarized_all <- aggregate(NV_CANT ~ year,data=tb_livestock_all,sum)
-  
-plot(NV_CANT ~ year,data=tb_summarized_all)
-
-tb_livestock <- subset(tb,tb$product_cat=="livestock" & tb$consumption==1)
-dim(tb_livestock)
-table(tb_livestock$NOMPRODUCT)
-
-#> names(table(tb_livestock$NOMPRODUCT))
-#[1] "ANIMALES CIRCO"          "ANIMALES ESPECTACULOS"   "AVES EN PIE"            
-#[4] "AVESTRUZ"                "BECERROS"                "BOVINOS EN PIE"         
-#[7] "BOVINOS EN PIE DE CRIA"  "CAPRINOS EN PIE"         "DESTETES BOVINO"        
-#[10] "DESTETES PORCINO"        "EQUINOS EN PIE"          "NOVILLOS"               
-#[13] "OTROS"                   "OTROS EN PIE"            "OVINOS EN PIE"          
-#[16] "PAVOS EN PIE"            "POLLITOS"                "PORCINOS EN PIE"        
-#[19] "PORCINOS EN PIE DE CRIA" "VACAS"                   "VENADOS EN PIE"      
-
-names(table(tb_livestock$NOMPRODUCT))
-names(table(tb_livestock$TRANSLATION))
-barplot(table(tb_livestock$NOMPRODUCT),names.arg=names(table(tb_livestock$NOMPRODUCT)),las=2)
-
-#should calves be in?
-selected_livestock1 <- c("BOVINOS EN PIE","BOVINOS EN PIE DE CRIA","DESTETES BOVINO","BOVINOS EN PIE DE CRIA")
-
-additional_cat1 <- c("CAPRINOS EN PIE","PORCINOS EN PIE DE CRIA","PORCINOS EN PIE","DESTETES PORCINO")
-additional_cat2 <- c("vacas")
-
-selected_livestock <- c(selected_livestock1,additional_cat1,additional_cat1)
-
-tb_to_convert <- subset(tb ,tb$NOMPRODUCT %in% selected_livestock)
-
-table(tb_to_convert$NV_UMEDIDA) #OK all cabeza
-
-#selected_livestock <- c(selected_livestock,additional_cat1,additional_cat1)
-selected_livestock <- c(selected_livestock1,additional_cat2,additional_cat1)
-
-#Stocking rates from 0.5 1 AU (head) per ha. for Mexico, tropical areas are more extensive 0.3. If we use 1 head per ha we are being generous
-#conversion_rate <- 1/c(0.3,0.5,1) #this corresponds to head per ha
-
-################# CHANGING HERE 10/18
-
-#filename_conversion_rate_crop <- file.path(conversion_rate_dir, "Crop_conversion_rates_10172016.csv")
-#filename_conversion_rate_livestock <- file.path(conversion_rate_dir,"Animal_conversion10172016.csv")
-
-tb_conversion_rate_livestock <- read.table(filename_conversion_rate_livestock,
-                                      header=T,stringsAsFactors = F,sep=",")
-tb_conversion_rate_livestock$NOMPRODUCT
-
-#select relevant product
-selected_nom_product <- tb_conversion_rate_livestock$NOMPRODUCT
-#additional_cat1 <- c("CAPRINOS EN PIE","PORCINOS EN PIE DE CRIA","PORCINOS EN PIE","DESTETES PORCINO")
-
-#select relevant product: use code rather than names to avoid problems
-
-selected_nom_product <- tb_conversion_rate_livestock$CODPROD
-#additional_cat1 <- c("CAPRINOS EN PIE","PORCINOS EN PIE DE CRIA","PORCINOS EN PIE","DESTETES PORCINO")
-
-#tb_to_convert <- subset(tb , tb$NOMPRODUCT %in% selected_nom_product)
-tb_to_convert <- subset(tb , tb$CODPROD %in% selected_nom_product)
-table(tb_to_convert$NV_UMEDIDA) #OK all TONELADA
-barplot(table(tb_to_convert$CODPROD),names.arg=names(table(tb_to_convert$CODPROD)),las=2)
-
-names(tb_conversion_rate_livestock) <- c("CODPROD","NOMPRODUCT","conversion_rate")
-
-#debug(apply_conversion_rate)
-#list_converted_tb_products <- lapply(1:1,
-#                                     FUN=apply_conversion_rate,
-#                                     tb_conversion_rate=tb_conversion_rate_crop,
-#                                     tb_products=tb_to_convert,
-#                                     col_product_name="CODPROD")
-
-list_converted_tb_products <- lapply(1:nrow(tb_conversion_rate_livestock),
-                                     FUN=apply_conversion_rate,
-                                     tb_conversion_rate=tb_conversion_rate_livestock,
-                                     tb_products=tb_to_convert,
-                                     col_product_name="CODPROD")
-
-
-sum(unlist(lapply(list_converted_tb_products,FUN=nrow)))
-dim(tb_to_convert)
-tb_land_livestock <- do.call(rbind,list_converted_tb_products)
-dim(tb_land_livestock)
-
-tb_land_livestock$land_consumption
-tb_land_livestock$percent_land_consumption <- (tb_land_livestock$land_consumption/total_land_consumed_qr)*100
-
-tb_land_summarized <- aggregate(land_consumption ~ year + product_cat , data = tb_land_livestock , sum)
-tb_land_summarized$percent_land_consumption <- (tb_land_summarized$land_consumption/total_land_consumed_qr)*100
-options(scipen=999)
-
-plot(percent_land_consumption ~year,data=tb_land_summarized ,type="b",
-     ylab="% of land in QR",
-     main="Livestock land consumption as percentage of land")
-
-tb_land_summarized2 <- aggregate(percent_land_consumption ~ flow_direction + year, data = tb_land_livestock, sum)
-
-p6 <- xyplot(percent_land_consumption ~ year | flow_direction ,data=tb_land_summarized2,
-             type="b",
-             ylab="% of land in QR", 
-             main="Livestock land consumption as percentage of land")
-
-p6
-
-#### Writing the tables
-tb_land_livestock$total_land_consumed <- total_land_consumed_qr
-
-tb_land_summarized_livestock_filename <- paste("tb_land_summarized_","livestock","_by_product_year",out_suffix,".txt",sep="")
-tb_land_summarized2_A_B_C_livestock_filename <- paste("tb_land_summarized2_","livestock","_by_flow_A_B_C_year",out_suffix,".txt",sep="")
-tb_land_livestock_filename <- paste("tb_land_","livestock", out_suffix,".txt",sep="")
-  
-write.table(tb_land_summarized,file= file.path(outDir,tb_land_summarized_livestock_filename) ,sep=",")
-write.table(tb_land_summarized2,file=file.path(outDir,tb_land_summarized2_A_B_C_livestock_filename),sep=",")
-write.table(tb_land_livestock,file=file.path(outDir,tb_land_livestock_filename),sep=",")
-            
-###################################################################
-#################### PART 6: CONVERSION FOR A SET OF AGRICULTURAL CROPS #############
-
-#filename_conversion_rate_crop <- file.path(conversion_rate_dir, "Crop_conversion_rates_10172016.csv")
-#filename_conversion_rate_livestock <- file.path(conversion_rate_dir,"Animal_conversion10172016.csv")
-#filename_conversion_rate_crop <- file.path(conversion_rate_dir, "Crop_conv_wcode_10182016.csv")
-#filename_conversion_rate_livestock <- file.path(conversion_rate_dir,"Animal_conversion_wcode_10182016.csv")
-
-tb_conversion_rate_crop <- read.table(filename_conversion_rate_crop,
-                                      header=T,stringsAsFactors = F,sep=",")
-tb_conversion_rate_crop$NOMPRODUCT
-
-
-#names(table(tb_livestock$NOMPRODUCT))
-#names(table(tb_livestock$TRANSLATION))
-#barplot(table(tb_livestock$NOMPRODUCT),names.arg=names(table(tb_livestock$NOMPRODUCT)),las=2)
-
-#select relevant product
-#selected_nom_product <- tb_conversion_rate_crop$NOMPRODUCT
-selected_nom_product <- tb_conversion_rate_crop$CODPROD
-#additional_cat1 <- c("CAPRINOS EN PIE","PORCINOS EN PIE DE CRIA","PORCINOS EN PIE","DESTETES PORCINO")
-
-#tb_to_convert <- subset(tb , tb$NOMPRODUCT %in% selected_nom_product)
-tb_to_convert <- subset(tb , tb$CODPROD %in% selected_nom_product)
-table(tb_to_convert$NV_UMEDIDA) #OK all TONELADA
-barplot(table(tb_to_convert$CODPROD),names.arg=names(table(tb_to_convert$CODPROD)),las=2)
-
-names(tb_conversion_rate_crop) <- c("CODPROD","NOMPRODUCT","conversion_rate")
-
-#debug(apply_conversion_rate)
-#list_converted_tb_products <- lapply(1:1,
-#                                     FUN=apply_conversion_rate,
-#                                     tb_conversion_rate=tb_conversion_rate_crop,
-#                                     tb_products=tb_to_convert,
-#                                     col_product_name="CODPROD")
-
-list_converted_tb_products <- lapply(1:nrow(tb_conversion_rate_crop),
-                                     FUN=apply_conversion_rate,
-                                     tb_conversion_rate=tb_conversion_rate_crop,
-                                     tb_products=tb_to_convert,
-                                     col_product_name="CODPROD")
-
-#list_converted_tb_products <- lapply(1:nrow(tb_conversion_rate_crop),FUN=apply_conversion_rate,
-#                              tb_conversion_rate=tb_conversion_rate_crop,
-#                              tb_products=tb_to_convert)
-
-sum(unlist(lapply(list_converted_tb_products,FUN=nrow)))
-
-tb_land_agri <- do.call(rbind,list_converted_tb_products)
-dim(tb_land_agri)
-### Get data for A and B etc...?
-dim(tb_land_agri)
-
-#tb_summarized <- aggregate(land_consumption ~ year + product_cat , data = tb_land_crops , sum)
-tb_land_agri$percent_land_consumption <- (tb_land_agri$land_consumption/total_land_consumed_qr)*100
-
-tb_land_summarized <- aggregate(land_consumption ~ year + product_cat , data = tb_land_agri , sum)
-tb_land_summarized$total_land_consumed <- total_land_consumed_qr
-
-tb_land_summarized$percent_land_consumption <- (tb_land_summarized$land_consumption/total_land_consumed_qr)*100
-options(scipen=999)
-tb_land_summarized2 <- aggregate(land_consumption ~ year + NOMPRODUCT , data = tb_land_agri , sum)
-tb_land_summarized2$percent_land_consumption <- (tb_land_summarized2$land_consumption/total_land_consumed_qr)*100
-tb_land_summarized2$total_land_consumed <- total_land_consumed_qr
-
-
-p4 <- xyplot(percent_land_consumption ~ year | NOMPRODUCT,data=tb_land_summarized2,
-             type="b",
-             ylab="Head", 
-             main="Livestock flow extraction total by year ")
-p4 #not using right now
-#drop melaza
-tb_land_summarized3 <- tb_land_summarized2[!tb_land_summarized2$NOMPRODUCT=="MELAZA",]
-p5 <- xyplot(percent_land_consumption ~ year | NOMPRODUCT,data=tb_land_summarized3,
-             type="b",
-             ylab="Head", 
-             main="AGRI flow extraction total by year ")
-p5
-#### For the results and figures
-
-plot(tb_land_summarized$percent_land_consumption ~year,data=tb_land_summarized,type="b",
-     ylab="% of land in QR",
-     main="AGRI land consumption as percentage of land")
-
-#plot(tb_summarized$land_consumption ~year,data=tb_summarized,type="b",main="crop")
-
-tb_land_summarized2 <- aggregate(percent_land_consumption ~ flow_direction + year, data =  tb_land_agri, sum)
-
-p6 <- xyplot(percent_land_consumption ~ year | flow_direction ,data=tb_land_summarized2,
-             type="b",
-             ylab="% of land in QR", 
-             main="AGRI land consumption as percentage of land")
-
-p6
-
-#### Writing the tables
-tb_land_agri$total_land_consumed <- total_land_consumed_qr
-
-tb_land_summarized_agri_filename <- paste("tb_land_summarized_","agri","_by_product_year",out_suffix,".txt",sep="")
-tb_land_summarized2_A_B_C_agri_filename <- paste("tb_land_summarized2_","agri","_by_flow_A_B_C_year",out_suffix,".txt",sep="")
-tb_land_agri_filename <- paste("tb_land_","agri", out_suffix,".txt",sep="")
-
-write.table(tb_land_summarized,file= file.path(outDir,tb_land_summarized_agri_filename) ,sep=",")
-write.table(tb_land_summarized2,file=file.path(outDir,tb_land_summarized2_A_B_C_agri_filename),sep=",")
-write.table(tb_land_agri,file=file.path(outDir,tb_land_agri_filename),sep=",")
-
-
-###################################################################
-#################### PART 6: CONVERSION FOR A SET OF MEAT #############
+#################### PART 5: CONVERSION TO LAND UNIT FOR AGRI, MEAT, LIVESTOCK #############
 
 flow_type <- "agri"
 #undebug(convert_to_land)
@@ -921,6 +686,13 @@ convert_land_obj_meat <- convert_to_land(filename_conversion_rate_meat,
                                          tb,
                                          flow_type,
                                          out_suffix,out_dir)
-  
+
+flow_type <- "livestock"
+#undebug(convert_to_land)
+
+convert_land_obj_livestock <- convert_to_land(filename_conversion_rate_livestock,
+                                              tb,
+                                              flow_type,
+                                              out_suffix,out_dir)
 
 #################################  END OF FILE ###########################################
